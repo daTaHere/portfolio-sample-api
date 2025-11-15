@@ -1,0 +1,64 @@
+### Python ###
+__pycache__/
+*.py[cod]
+*$py.class
+
+### Build / Packaging ###
+.Python
+build/
+dist/
+downloads/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+
+### Testing / Coverage ###
+htmlcov/
+.coverage
+.coverage.*
+.cache
+coverage.xml
+*.cover
+*.py,cover
+.pytest_cache/
+
+### Flask ###
+instance/
+.webassets-cache
+
+### Celery ###
+celerybeat-schedule
+celerybeat.pid
+
+### Environment ###
+.env
+.env.*
+.venv/
+venv/
+ENV/
+
+### VisualStudioCode ###
+.vscode/*
+!.vscode/settings.json 
+
+### Logs / runtime ###
+*.log
+
+
+### infra ###
+
+### Ansible ###
+*.retry
+*.vault
+*.vault_pass.txt
+.cache/
+
+### Terraform ###
+# Local .terraform directories
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+!terraform.tfvars.example
