@@ -38,6 +38,7 @@ celerybeat.pid
 .venv/
 venv/
 ENV/
+todos/
 
 ### VisualStudioCode ###
 .vscode/*

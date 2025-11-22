@@ -5,6 +5,7 @@ Initializes and configures the Flask app with all extensions.
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+import logging
 import structlog
 import os
 
@@ -35,7 +36,8 @@ def create_app(config_name=None):
     # Initialize extensions
     db.init_app(app)
     CORS(app)
-    
+
+    logging.basicConfig(level=logging.INFO) 
     # Configure structured logging
     structlog.configure(
         processors=[
@@ -56,7 +58,9 @@ def create_app(config_name=None):
     
     # Register blueprints
     from app.routes.user_routes import user_bp
+    from app.routes.feed_routes import feed_bp
     app.register_blueprint(user_bp, url_prefix='/api')
+    app.register_blueprint(feed_bp, url_prefix='/api')
     
     # Create database tables
     with app.app_context():

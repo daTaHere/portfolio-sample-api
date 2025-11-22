@@ -1,0 +1,13 @@
+from app.exceptions.base_exceptions import (
+    APIException,
+    DatabaseException,
+    ServiceException,
+)
+from app.exceptions.api_exceptions import ExternalAPIConnectionError
+
+__all__ = [
+    "APIException",
+    "DatabaseException",
+    "ExternalAPIConnectionError",
+    "ServiceException",
+]
