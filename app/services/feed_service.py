@@ -17,167 +17,132 @@ from app.exceptions.base_exceptions import (
     ServiceException,
 )
 
-JSONPLACEHOLDER_BASE_URL = "https://jsonplaceholder.typicode.com"
+JSONPLACEHOLDER_BASE_URL = "https://jsonplaceholder.typicode.com/"
+POST_ENDPOINT = "posts"
+COMMENT_ENDPOINT = "comments"
 HTTP_TIMEOUT_SECONDS = 5.0
 RETRY_BACKOFF_BASE = 0.2  # seconds
 
 T = TypeVar("T", bound=Post | Comment)
 
-"""
-    Sends request to JsonPlaceholder API.
-    Args:
-        endpoint -> url of api for request
-    Return:
-        Json object response
-    example:
-        send_request(endpoint = 'www.myendpoint.com/{endpoint})
-    
-"""
-
 
 async def send_request(endpoint: str) -> List[Dict[str, Any]]:
+    """
+    Send HTTP request to 3rd party API and return JSON list.
+    Handles network, HTTP status, and JSON decoding errors.
+    """
     url = endpoint
+    logger.debug(f"Request Sent", extra={"endpoint": url, "method": "send_request"})
     try:
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
             res = await client.get(url)
             res.raise_for_status()
-            return res.json()
+            data = res.json()
+            logger.debug(
+                "Response received", extra={"endpoint": url, "records": len(data)}
+            )
+            if not isinstance(data, list):
+                raise ServiceException(
+                    f"Unexpected response type, expected list",
+                    service_method="send_request",
+                    model=endpoint.upper(),
+                )
+            return data
     except httpx.RequestError as e:
+        logger.error(
+            "Request failed",
+            extra={"endpoint": url, "error": str(e)},
+        )
         raise APIException(
-            "Failed request JsonPlaceHolder ", endpoint=url, method="GET"
+            "Failed JsonPlaceHolder request ", endpoint=url, method="GET"
         ) from e
     except httpx.HTTPStatusError as e:
+        logger.error(
+            f"Bad status code",
+            extra={"path": url, "status_code": e.response.status_code, "error": str(e)},
+        )
         raise APIException(
-            f"Bad status code from JsonPlaceholder: {e.response.status_code}",
+            f"Bad status code: {e.response.status_code}",
             endpoint=url,
             method="GET",
         ) from e
     except httpx.DecodingError as e:
+        logger.error(f"Invalid JSON response", extra={"path": url, "error": str(e)})
         raise APIException(
             "Invalid JSON response from JsonPlaceholder", endpoint=url, method="GET"
         ) from e
     except Exception as e:
+        logger.error(f"Unexpected request error", extra={"path": url, "error": str(e)})
         raise APIException("Failed to send request", endpoint=url, method="GET") from e
 
 
-"""
-    Fetch 10 post records 
-    Args:
-        start -> beginning query index
-        limit -> number of records
-    return:
-        dict object of 10 Post items
-    example:
-        url -> api endpoint url
-        send_request(url)
-"""
-
-
-async def get_posts(start: int, limit: int) -> List[Dict[str, Any]]:
-    url = f"{JSONPLACEHOLDER_BASE_URL}/posts?_start={start}&_limit={limit}"
+async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]]:
+    """
+    Fetch records from a specific endpoint and return as list of dicts.
+    Only validates type; content validation deferred to marshmallow.
+    """
+    url = f"{JSONPLACEHOLDER_BASE_URL}/{endpoint}?_start={start}&_limit={limit}"
+    logger.info(f" Fetch data ", extra={"endpoint": url, "method": "get_data"})
     try:
-        res = await send_request(url)  # All HTTP errors already handled
-        if not isinstance(res, list):
-            raise ServiceException(
-                "Unexpected Post response format",
-                service_method="get_posts",
-                model="Post",
+        data = await send_request(url)  # All HTTP errors already handled
+        logger.info(
+            f" Data fetch successful ",
+            extra={"service_method": "get_data", "model": endpoint.upper()},
+        )
+        if len(data) != limit:
+            logger.error(
+                f"Missing or incomplete return",
+                extra={
+                    "method": "get_data",
+                    "model": endpoint.upper(),
+                    "count": len(data),
+                },
             )
-        if len(res) != limit:
             raise ServiceException(
-                f"Expected {limit} Post records, received {len(res)}",
-                service_method="get_posts",
-                model="Post",
+                f"Expected {limit} items, received {len(data)}",
+                service_method="get_data",
+                model=endpoint.upper(),
             )
-        return res  # Only JSON decode problems left
+        return data
     except Exception as e:
+        logger.error("Unexpected error in get_data", extra={"error": str(e)})
         raise ServiceException(
-            "Failed to parse Post response", service_method="get_posts", model="Post"
+            f"Failed to fetch {url} data",
+            service_method="get_data",
+            model=endpoint.upper(),
         ) from e
-
-
-"""
-    Fetch 10 comment records 
-    Args:
-        start -> beginning query index
-        limit -> number of records
-    return:
-        List of dict objects of 10 Comment items
-    example:
-        url -> api endpoint url
-        send_request(url)
-"""
-
-
-async def get_comments(start: int, limit: int) -> List[Dict[str, Any]]:
-    url = f"{JSONPLACEHOLDER_BASE_URL}/comments?_start={start}&_limit={limit}"
-    try:
-        res = await send_request(url)  # All HTTP errors already handled
-        if not isinstance(res, list):
-            raise ServiceException(
-                "Unexpected Comment response format",
-                service_method="get_comments",
-                model="Comment",
-            )
-        if len(res) != limit:
-            raise ServiceException(
-                f"Expected {limit} Comment records, received {len(res)}",
-                service_method="get_comments",
-                model="Comment",
-            )
-        return res  # Only JSON decode problems left
-    except Exception as e:
-        raise ServiceException(
-            "Failed to parse Comment response",
-            service_method="get_comments",
-            model="Comment",
-        ) from e
-
-
-"""
-    Create a List of Posts/Comments for feed
-    Raise expection on corrupt, malformed, miss data.
-
-    Args:
-        input_data -> Coroute object
-        model -> class of Type Post or Comment
-    Return:
-        List of Models
-    Example:
-        def create_feed_input(Post_data, Post)
-"""
 
 
 def create_feed_input(input_data: List[Dict[str, any]], model: Type[T]) -> List[T]:
+    """
+    Instantiate Post or Comment objects from raw data.
+    Logging included for success/failure.
+    """
     try:
-        return [model(data) for data in input_data]
-    except KeyError as e:
+        items = [model(d) for d in input_data]
+        logger.info(
+            "Model instances created",
+            extra={"model": model.__name__, "count": len(items)},
+        )
+        return items
+    except Exception as e:
+        logger.exception(
+            "Failed creating model instances", extra={"model": model.__name__}
+        )
         raise ServiceException(
-            "Failed to create feed inputs",
+            f"Failed to create {model.__name__} instances",
             service_method="create_feed_input",
             model=model.__name__,
         ) from e
 
 
-"""
-    Service fetches Post and Comment from 3rd party API.
-    ETL respones and hydrates 10 Feed objects.
-
-    Args:
-        start -> Query start index : default 0
-        limit -> Number of records: default 10
-    Return:
-        List of 10 feed objects
-    Example:
-        get_10_feeds(start=0,limit=10)
-
-"""
-
-
 async def get_10_feeds(start: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
+    """
+    Orchestrates fetching posts and comments, builds feed objects.
+    """
 
-    posts_coro = get_posts(start, limit)
-    comments_coro = get_comments(start, limit)
+    posts_coro = get_data(POST_ENDPOINT, start, limit)
+    comments_coro = get_data(COMMENT_ENDPOINT, start, limit)
     post_data, comment_data = await asyncio.gather(posts_coro, comments_coro)
 
     posts = create_feed_input(post_data, Post)
@@ -185,21 +150,24 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
 
     logger.info(f"Post_Cnt: {len(posts)}, Comment_Cnt: {len(comments)}")
 
-    sorted_comments: Dict[int, List[Comment]] = defaultdict(list)
+    # Organize comments by post_id
+    comments_by_post: Dict[int, List[Comment]] = defaultdict(list)
     for c in comments:
-        sorted_comments[c._postId].append(c)
+        comments_by_post[c._postId].append(c)
 
     try:
         feeds = [
-            PostWithComments(post, sorted_comments[post._id]).to_dict()
+            PostWithComments(post, comments_by_post[post._id]).to_dict()
             for post in posts
         ]
+        logger.info(f"Successfully created {len(feeds)} feed items")
         return feeds
-    except KeyError as e:
-        raise ServiceException(
-            "Failed to return feed Key Error", model="PostWithComments"
-        ) from e
 
     except Exception as e:
-        logger.exception("Failed to fetch feeds")  # includes stack trace
-        raise ServiceException("Failed to fetch feeds", model="PostWithComments") from e
+        logger.exception(
+            "Unexpected error",
+            extra={"service_method": "get_10_feeds", "error": str(e)},
+        )  # includes stack trace
+        raise ServiceException(
+            "Unexpected error fail to fetch feeds", model="PostWithComments"
+        ) from e
