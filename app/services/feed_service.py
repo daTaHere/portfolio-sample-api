@@ -17,9 +17,10 @@ from app.exceptions.base_exceptions import (
     ServiceException,
 )
 
-JSONPLACEHOLDER_BASE_URL = "https://jsonplaceholder.typicode.com/"
+JSONPLACEHOLDER_BASE_URL = "https://jsonplaceholder.typicode.com"
 POST_ENDPOINT = "posts"
 COMMENT_ENDPOINT = "comments"
+MAX_RETRIES = 3
 HTTP_TIMEOUT_SECONDS = 5.0
 RETRY_BACKOFF_BASE = 0.2  # seconds
 
@@ -33,47 +34,63 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
     """
     url = endpoint
     logger.debug(f"Request Sent", extra={"endpoint": url, "method": "send_request"})
-    try:
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
-            res = await client.get(url)
-            res.raise_for_status()
-            data = res.json()
-            logger.debug(
-                "Response received", extra={"endpoint": url, "records": len(data)}
-            )
-            if not isinstance(data, list):
-                raise ServiceException(
-                    f"Unexpected response type, expected list",
-                    service_method="send_request",
-                    model=endpoint.upper(),
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
+                res = await client.get(url)
+                res.raise_for_status()
+                data = res.json()
+                logger.debug(
+                    "Response received", extra={"endpoint": url, "records": len(data)}
                 )
-            return data
-    except httpx.RequestError as e:
-        logger.error(
-            "Request failed",
-            extra={"endpoint": url, "error": str(e)},
-        )
-        raise APIException(
-            "Failed JsonPlaceHolder request ", endpoint=url, method="GET"
-        ) from e
-    except httpx.HTTPStatusError as e:
-        logger.error(
-            f"Bad status code",
-            extra={"path": url, "status_code": e.response.status_code, "error": str(e)},
-        )
-        raise APIException(
-            f"Bad status code: {e.response.status_code}",
-            endpoint=url,
-            method="GET",
-        ) from e
-    except httpx.DecodingError as e:
-        logger.error(f"Invalid JSON response", extra={"path": url, "error": str(e)})
-        raise APIException(
-            "Invalid JSON response from JsonPlaceholder", endpoint=url, method="GET"
-        ) from e
-    except Exception as e:
-        logger.error(f"Unexpected request error", extra={"path": url, "error": str(e)})
-        raise APIException("Failed to send request", endpoint=url, method="GET") from e
+                if not isinstance(data, list):
+                    raise ServiceException(
+                        f"Externa API error: expected type List",
+                        service_method="send_request",
+                        model=endpoint.upper(),
+                    )
+                return data
+        except (httpx.RequestError, httpx.ConnectTimeout) as e:
+            wait_time = RETRY_BACKOFF_BASE * (2 ** (attempt - 1))
+            logger.warning(
+                f"Request attempt {attempt} failed, retrying in {wait_time:.2f}s",
+                extra={"endpoint": url, "error": str(e), "attempt": attempt},
+            )
+            if attempt == MAX_RETRIES:
+                logger.error(
+                    "Request failed",
+                    extra={"endpoint": url, "error": str(e)},
+                )
+                raise APIException(
+                    "External API Error: Unreachable", endpoint=url, method="GET"
+                ) from e
+            await asyncio.sleep(wait_time)
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"Response return bad status code.",
+                extra={
+                    "path": url,
+                    "status_code": e.response.status_code,
+                    "error": str(e),
+                },
+            )
+            raise APIException(
+                f"External API Error: Bad status code: {e.response.status_code}",
+                endpoint=url,
+                method="GET",
+            ) from e
+        except httpx.DecodingError as e:
+            logger.error(f"Invalid JSON response", extra={"path": url, "error": str(e)})
+            raise APIException(
+                "External API Error: Invalid JSON response.", endpoint=url, method="GET"
+            ) from e
+        except Exception as e:
+            logger.error(
+                f"Unexpected request error", extra={"path": url, "error": str(e)}
+            )
+            raise APIException(
+                "External API Error: Unexpected error", endpoint=url, method="GET"
+            ) from e
 
 
 async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]]:
@@ -99,7 +116,7 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
                 },
             )
             raise ServiceException(
-                f"Expected {limit} items, received {len(data)}",
+                f"Internal Server Error Expected {limit} items, received {len(data)}.",
                 service_method="get_data",
                 model=endpoint.upper(),
             )
@@ -107,7 +124,7 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
     except Exception as e:
         logger.error("Unexpected error in get_data", extra={"error": str(e)})
         raise ServiceException(
-            f"Failed to fetch {url} data",
+            f"Internal Server Error: Unexpected error fetching data.",
             service_method="get_data",
             model=endpoint.upper(),
         ) from e
@@ -127,10 +144,15 @@ def create_feed_input(input_data: List[Dict[str, any]], model: Type[T]) -> List[
         return items
     except Exception as e:
         logger.exception(
-            "Failed creating model instances", extra={"model": model.__name__}
+            "Failed creating model instances",
+            extra={
+                "method": "create_feed_input",
+                "model": model.__name__,
+                "error": str(e),
+            },
         )
         raise ServiceException(
-            f"Failed to create {model.__name__} instances",
+            f"Internal Server Error: Failed to create {model.__name__} instances.",
             service_method="create_feed_input",
             model=model.__name__,
         ) from e
@@ -160,7 +182,10 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
             PostWithComments(post, comments_by_post[post._id]).to_dict()
             for post in posts
         ]
-        logger.info(f"Successfully created {len(feeds)} feed items")
+        logger.info(
+            f"Successfully created {len(feeds)} feed items",
+            extra={"service_method": "get_10_feeds", "model": "PostWithComments"},
+        )
         return feeds
 
     except Exception as e:
@@ -169,5 +194,6 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
             extra={"service_method": "get_10_feeds", "error": str(e)},
         )  # includes stack trace
         raise ServiceException(
-            "Unexpected error fail to fetch feeds", model="PostWithComments"
+            "Internal Server Error: Unexpected error fail to fetch feeds.",
+            extra={"service_method": "get_10_feeds", "model": "PostWithComments"},
         ) from e

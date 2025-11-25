@@ -1,8 +1,7 @@
 from flask import Blueprint, jsonify, request
 from app import logger
 from app.services.feed_service import get_10_feeds
-from app.exceptions.api_exceptions import APIException, ExternalAPIConnectionError
-
+from app.exceptions.base_exceptions import APIException, ServiceException
 
 feed_bp = Blueprint("feeds", __name__)
 
@@ -24,21 +23,38 @@ async def get_feeds():
             extra={
                 "route": "/feeds",
                 "status": 200,
-                "items": len(res) if isinstance(res, list) else "n/a",
+                "items": len(res),
             },
         )
-        return jsonify(res)
+        return jsonify({"success": True, "data": res}), 200
     except APIException as e:
+        # 3rd-party HTTP failure → 502
         logger.error(
             "APIException occurred",
             extra={
                 "route": "/feeds",
                 "endpoint": e.endpoint,
                 "method": e.method,
-                "original_exception": str(e.original_exception),
             },
         )
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": e.message}), 502
+    except ServiceException as e:
+        logger.error(
+            "ServiceException occurred",
+            extra={
+                "route": "/feeds",
+                "endpoint": e.endpoint,
+                "method": e.method,
+            },
+        )
+        return jsonify({"success": False, "error": e.message}), 500
     except Exception as e:
-        print(str(e))
-        return jsonify({"success": False, "error": "Failed request"}, 500)
+        logger.error(
+            "Unexpected error occurred",
+            extra={
+                "route": "/feeds",
+                "endpoint": e.endpoint,
+                "method": e.method,
+            },
+        )
+        return jsonify({"success": False, "error": e.message}), 500
