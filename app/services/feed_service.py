@@ -40,22 +40,21 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
                 res = await client.get(url)
                 res.raise_for_status()
                 data = res.json()
-                logger.debug(
-                    "Response received", extra={"endpoint": url, "records": len(data)}
-                )
                 if not isinstance(data, list):
                     raise ServiceException(
                         f"Externa API error: expected type List",
                         service_method="send_request",
                         model=endpoint.upper(),
                     )
+
+                logger.debug(
+                    "Response received", extra={"endpoint": url, "records": len(data)}
+                )
+
                 return data
         except (httpx.RequestError, httpx.ConnectTimeout) as e:
             wait_time = RETRY_BACKOFF_BASE * (2 ** (attempt - 1))
-            logger.warning(
-                f"Request attempt {attempt} failed, retrying in {wait_time:.2f}s",
-                extra={"endpoint": url, "error": str(e), "attempt": attempt},
-            )
+
             if attempt == MAX_RETRIES:
                 logger.error(
                     "Request failed",
@@ -64,6 +63,10 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
                 raise APIException(
                     "External API Error: Unreachable", endpoint=url, method="GET"
                 ) from e
+            logger.warning(
+                f"Request attempt {attempt} failed, retrying in {wait_time:.2f}s",
+                extra={"endpoint": url, "error": str(e), "attempt": attempt},
+            )
             await asyncio.sleep(wait_time)
         except httpx.HTTPStatusError as e:
             logger.error(
@@ -84,6 +87,8 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
             raise APIException(
                 "External API Error: Invalid JSON response.", endpoint=url, method="GET"
             ) from e
+        except ServiceException:
+            raise
         except Exception as e:
             logger.error(
                 f"Unexpected request error", extra={"path": url, "error": str(e)}
