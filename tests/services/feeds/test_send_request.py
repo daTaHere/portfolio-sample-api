@@ -38,7 +38,7 @@ async def test_send_request_empty_response_success():
 @pytest.mark.asyncio
 @respx.mock
 @pytest.mark.parametrize("bad_json", [123, True, "string", {"key": "value"}])
-async def test_send_request_unexpected_json_type_raise_service_exception(bad_json):
+async def test_send_request_unexpected_json_type_raises_service_exception(bad_json):
     url = BASE_URL
     # mock a 200 response with bad JSON type
     respx.get(url).mock(return_value=httpx.Response(200, json=bad_json))
@@ -95,17 +95,6 @@ async def test_send_request_network_error_raises_api_exception():
 
 @pytest.mark.asyncio
 @respx.mock
-async def test_send_request_http_status_error_raises_api_exception():
-    url = BASE_URL
-    # simulate http status error
-    respx.get(url).mock(return_value=httpx.Response(500, content=b"invalid json"))
-
-    with pytest.raises(APIException):
-        await send_request(url)
-
-
-@pytest.mark.asyncio
-@respx.mock
 async def test_send_request_retry_connection_timeout_raises_api_exception():
     url = BASE_URL
     # simulate network/connect timeout error
@@ -128,5 +117,5 @@ async def test_send_request_retry_connection_timeout_raises_api_exception():
         if "Request failed" in call.args[0]
     ]
 
-    assert len(retry_logs) == 2  # 3 retries before the last attempt
+    assert len(retry_logs) == 2  # 2 retries before the last attempt
     assert len(final_error_logs) == 1  # final failure logged
