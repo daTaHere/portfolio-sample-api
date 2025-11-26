@@ -26,7 +26,7 @@ async def test_send_request_success():
 @respx.mock
 async def test_send_request_empty_response_success():
     url = f"{BASE_URL}?_start=0&_limit=0"
-    # mock a 200 JSON list response
+    # mock a 200 JSON empty list response
     respx.get(url).mock(return_value=httpx.Response(200, json=[]))
 
     data = await send_request(url)
@@ -103,7 +103,7 @@ async def test_send_request_retry_connection_timeout_raises_api_exception():
         with pytest.raises(APIException):
             await send_request(url)
 
-    assert len(route.calls) == 3  # Ensure 3 retries were attempted
+    assert len(route.calls) == 3  # Ensure 3 attempts were made
 
     # Inspect logger calls
     retry_logs = [
