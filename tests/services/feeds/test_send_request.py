@@ -95,10 +95,10 @@ async def test_send_request_network_error_raises_api_exception():
 
 @pytest.mark.asyncio
 @respx.mock
-async def test_send_request_decoding_error_raises_api_exception():
+async def test_send_request_http_status_error_raises_api_exception():
     url = BASE_URL
-    # simulate decoding error
-    respx.get(url).mock(side_effect=httpx.Response(500, content=b"invalid json"))
+    # simulate http status error
+    respx.get(url).mock(return_value=httpx.Response(500, content=b"invalid json"))
 
     with pytest.raises(APIException):
         await send_request(url)
@@ -106,7 +106,7 @@ async def test_send_request_decoding_error_raises_api_exception():
 
 @pytest.mark.asyncio
 @respx.mock
-async def test_send_request_retry_connection_timeout_raises_api_exception(caplog):
+async def test_send_request_retry_connection_timeout_raises_api_exception():
     url = BASE_URL
     # simulate network/connect timeout error
     route = respx.get(url).mock(side_effect=httpx.ConnectTimeout("connection timeout"))

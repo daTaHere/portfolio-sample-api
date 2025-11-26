@@ -42,7 +42,7 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
                 data = res.json()
                 if not isinstance(data, list):
                     raise ServiceException(
-                        f"Externa API error: expected type List",
+                        f"External API error: expected type List",
                         service_method="send_request",
                         model=endpoint.upper(),
                     )
