@@ -30,7 +30,7 @@ async def test_get_data_success(mock_send_request):
     mock_send_request.assert_called_once_with(expected_url)
     assert res == fake_data
     assert isinstance(res, list)
-    assert len(res) == limit
+    assert len(res) == limit  # test assumes response length equals limit exactly
     assert all(isinstance(item, dict) for item in res)
     assert res[0]["id"] == start + 1
     assert res[-1]["id"] == len(res)

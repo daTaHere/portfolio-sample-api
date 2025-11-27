@@ -108,7 +108,7 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
     try:
         data = await send_request(
             url
-        )  # All ApiException and ServiceException propagated
+        )  # All APIException and ServiceException propagated
     except (TypeError, ValueError) as e:
         logger.error("Unexpected error in get_data", extra={"error": str(e)})
         raise ServiceException(
