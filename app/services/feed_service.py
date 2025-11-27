@@ -104,35 +104,36 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
     Only validates type; content validation deferred to marshmallow.
     """
     url = f"{JSONPLACEHOLDER_BASE_URL}/{endpoint}?_start={start}&_limit={limit}"
-    logger.info(f" Fetch data ", extra={"endpoint": url, "method": "get_data"})
+    logger.info(f"Fetching data", extra={"endpoint": url, "method": "get_data"})
     try:
         data = await send_request(url)  # All HTTP errors already handled
-        logger.info(
-            f" Data fetch successful ",
-            extra={"service_method": "get_data", "model": endpoint.upper()},
-        )
-        if len(data) != limit:
-            logger.error(
-                f"Missing or incomplete return",
-                extra={
-                    "method": "get_data",
-                    "model": endpoint.upper(),
-                    "count": len(data),
-                },
-            )
-            raise ServiceException(
-                f"Internal Server Error Expected {limit} items, received {len(data)}.",
-                service_method="get_data",
-                model=endpoint.upper(),
-            )
-        return data
-    except Exception as e:
+    except (TypeError, ValueError) as e:
         logger.error("Unexpected error in get_data", extra={"error": str(e)})
         raise ServiceException(
             f"Internal Server Error: Unexpected error fetching data.",
             service_method="get_data",
-            model=endpoint.upper(),
+            model=endpoint,
         ) from e
+
+    logger.info(
+        f" Data fetch successful ",
+        extra={"service_method": "get_data", "model": endpoint.upper()},
+    )
+    if len(data) > limit:
+        logger.error(
+            f" Response item count mismatch ",
+            extra={
+                "method": "get_data",
+                "model": endpoint.upper(),
+                "count": len(data),
+            },
+        )
+        raise ServiceException(
+            f"Internal Server Error Expected {limit} items, received {len(data)}.",
+            service_method="get_data",
+            model=endpoint.upper(),
+        )
+    return data
 
 
 def create_feed_input(input_data: List[Dict[str, any]], model: Type[T]) -> List[T]:

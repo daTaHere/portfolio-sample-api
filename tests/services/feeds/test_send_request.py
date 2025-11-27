@@ -90,7 +90,7 @@ async def test_send_request_network_error_raises_api_exception():
     with pytest.raises(APIException):
         await send_request(url)
 
-    assert len(route.calls) == 3  # Ensure 3 retries were attempted
+    assert len(route.calls) == 3  # Ensure 3 attempts were made
 
 
 @pytest.mark.asyncio
