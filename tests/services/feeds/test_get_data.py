@@ -2,7 +2,7 @@ import pytest
 
 from unittest.mock import patch
 from app.services.feed_service import get_data
-from app.exceptions.base_exceptions import APIException, ServiceException
+from app.exceptions.base_exceptions import ServiceException
 
 DEFAULT_BASE_URL = "https://jsonplaceholder.typicode.com"
 DEFAULT_ENDPOINT = "posts"
@@ -61,6 +61,8 @@ async def test_get_data_response_items_within_limit_success(
     endpoint = DEFAULT_ENDPOINT
     start = DEFAULT_START
     limit = 10
+    # generate fake data 1 item less requested limit to test boundary or equal to 10
+    # id values starting from 1 indexed
     fake_data = [
         {"id": i + 1}
         for i in range(0, valid_limits - 1 if valid_limits != 10 else valid_limits)

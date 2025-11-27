@@ -106,7 +106,9 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
     url = f"{JSONPLACEHOLDER_BASE_URL}/{endpoint}?_start={start}&_limit={limit}"
     logger.info(f"Fetching data", extra={"endpoint": url, "method": "get_data"})
     try:
-        data = await send_request(url)  # All HTTP errors already handled
+        data = await send_request(
+            url
+        )  # All ApiException and ServiceException propagated
     except (TypeError, ValueError) as e:
         logger.error("Unexpected error in get_data", extra={"error": str(e)})
         raise ServiceException(
@@ -116,12 +118,12 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
         ) from e
 
     logger.info(
-        f" Data fetch successful ",
+        f"Data fetch successful",
         extra={"service_method": "get_data", "model": endpoint.upper()},
     )
     if len(data) > limit:
         logger.error(
-            f" Response item count mismatch ",
+            f"Response item count mismatch",
             extra={
                 "method": "get_data",
                 "model": endpoint.upper(),
