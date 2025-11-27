@@ -131,7 +131,7 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
             },
         )
         raise ServiceException(
-            f"Internal Server Error Expected {limit} items, received {len(data)}.",
+            f"Internal Server Error Received: {len(data)} items, Expected: up to {limit} items.",
             service_method="get_data",
             model=endpoint.upper(),
         )
