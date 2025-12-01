@@ -7,7 +7,7 @@ from app.services.feed_service import create_model_list
 from app.models.post_detail_model import Post, Comment
 from app.exceptions.base_exceptions import ServiceException
 
-DEFAULT_INPUT_DATA = [
+ERROR_TEST_DATA = [
     {
         "userId": 1,
         "id": 2,
@@ -100,7 +100,7 @@ def test_create_model_list_success_empty_response(mock_logger):
 
 
 def test_create_model_list_type_error_raises_service_exception(mock_logger):
-    input_data = DEFAULT_INPUT_DATA
+    input_data = ERROR_TEST_DATA
 
     with patch(
         "app.services.feed_service.Post.__init__",
@@ -113,7 +113,7 @@ def test_create_model_list_type_error_raises_service_exception(mock_logger):
 
 
 def test_create_model_list_value_error_raises_service_exception(mock_logger):
-    input_data = DEFAULT_INPUT_DATA
+    input_data = ERROR_TEST_DATA
 
     with patch(
         "app.services.feed_service.Post.__init__",

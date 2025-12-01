@@ -55,6 +55,8 @@ class Comment:
 
 
 class PostWithComments(Post):
+    __slots__ = ("comments",)
+
     def __init__(self, posts: Post, comments: Dict[int, List[Comment]]):
         self._id = posts.id
         self.title = posts.title
