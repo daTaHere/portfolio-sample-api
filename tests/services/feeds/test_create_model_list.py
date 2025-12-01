@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from typing import Generator, List
 
-from app.services.feed_service import create_feed_input
+from app.services.feed_service import create_model_list
 from app.models.post_detail_model import Post, Comment
 from app.exceptions.base_exceptions import ServiceException
 
@@ -70,9 +70,9 @@ def assert_logger_called_with(
         DEFAULT_COMMENT_DATA,
     ],
 )
-def test_create_feed_input_success(mock_logger, input_data, model, expected_slots):
+def test_create_model_list_success(mock_logger, input_data, model, expected_slots):
 
-    result = create_feed_input(input_data, model)
+    result = create_model_list(input_data, model)
     assert_logger_called_with(mock_logger, "Model instances created", "info")
 
     assert isinstance(result, List)
@@ -82,14 +82,14 @@ def test_create_feed_input_success(mock_logger, input_data, model, expected_slot
     assert result[0].id == 2
     assert result[-1].id == 3
     assert all(
-        hasattr(item, "userId") == False for item in result
-    )  # userId should not be an attribute
+        not hasattr(item, "userId") for item in result
+    )  # userId should not not leak into model instances
 
 
-def test_create_feed_input_empty_response_success(mock_logger):
+def test_create_model_list_success_empty_response(mock_logger):
     input_data = []
 
-    result = create_feed_input(input_data, Post)
+    result = create_model_list(input_data, Post)
 
     assert_logger_called_with(mock_logger, "Model instances created", "info")
 
@@ -98,7 +98,7 @@ def test_create_feed_input_empty_response_success(mock_logger):
     assert len(result) == 0
 
 
-def test_create_feed_input_type_error_raises_service_exception(mock_logger):
+def test_create_model_list_type_error_raises_service_exception(mock_logger):
     input_data = DEFAULT_INPUT_DATA
 
     with patch(
@@ -106,12 +106,12 @@ def test_create_feed_input_type_error_raises_service_exception(mock_logger):
         side_effect=TypeError("Invalid data"),
     ):
         with pytest.raises(ServiceException):
-            create_feed_input(input_data, Post)
+            create_model_list(input_data, Post)
 
     assert_logger_called_with(mock_logger, "Error creating ", "exception")
 
 
-def test_create_feed_input_value_error_raises_service_exception(mock_logger):
+def test_create_model_list_value_error_raises_service_exception(mock_logger):
     input_data = DEFAULT_INPUT_DATA
 
     with patch(
@@ -119,6 +119,6 @@ def test_create_feed_input_value_error_raises_service_exception(mock_logger):
         side_effect=ValueError("Invalid data"),
     ):
         with pytest.raises(ServiceException):
-            create_feed_input(input_data, Post)
+            create_model_list(input_data, Post)
 
     assert_logger_called_with(mock_logger, "Error creating ", "exception")

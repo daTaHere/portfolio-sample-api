@@ -138,7 +138,7 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
     return data
 
 
-def create_feed_input(input_data: List[Dict[str, any]], model: Type[T]) -> List[T]:
+def create_model_list(input_data: List[Dict[str, any]], model: Type[T]) -> List[T]:
     """
     Instantiate Post or Comment objects from raw data.
     Logging included for success/failure.
@@ -176,8 +176,8 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
     comments_coro = get_data(COMMENT_ENDPOINT, start, limit)
     post_data, comment_data = await asyncio.gather(posts_coro, comments_coro)
 
-    posts = create_feed_input(post_data, Post)
-    comments = create_feed_input(comment_data, Comment)
+    posts = create_model_list(post_data, Post)
+    comments = create_model_list(comment_data, Comment)
 
     logger.info(f"Post_Cnt: {len(posts)}, Comment_Cnt: {len(comments)}")
 
