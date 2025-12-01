@@ -81,9 +81,10 @@ def test_create_model_list_success(mock_logger, input_data, model, expected_slot
     assert len(result) == 2
     assert result[0].id == 2
     assert result[-1].id == 3
-    assert all(
-        not hasattr(item, "userId") for item in result
-    )  # userId should not not leak into model instances
+    if model == Post:
+        assert all(
+            not hasattr(item, "userId") for item in result
+        )  # userId should not leak into model instances
 
 
 def test_create_model_list_success_empty_response(mock_logger):

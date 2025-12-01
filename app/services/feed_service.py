@@ -149,14 +149,14 @@ def create_model_list(input_data: List[Dict[str, any]], model: Type[T]) -> List[
         logger.exception(
             f"Error creating {model.__name__} instances",
             extra={
-                "method": "create_feed_input",
+                "method": "create_model_list",
                 "model": model.__name__,
                 "error": str(e),
             },
         )
         raise ServiceException(
             f"Internal Server Error: Failed to create {model.__name__} instances.",
-            service_method="create_feed_input",
+            service_method="create_model_list",
             model=model.__name__,
         ) from e
 
