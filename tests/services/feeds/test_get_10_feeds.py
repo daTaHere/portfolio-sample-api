@@ -1,9 +1,9 @@
 import pytest
 
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any, Dict, List, Generator
+from typing import Any, Tuple, Dict, List, Generator
 
-from app.services.feed_service import get_10_feeds, PostWithComments
+from app.services.feed_service import get_10_feeds
 from app.exceptions.base_exceptions import ServiceException
 
 DEFAULT_POST_DATA = [
@@ -96,7 +96,7 @@ def is_logged(mock_logger: MagicMock, message_substr: str, level: str) -> bool:
 
 
 @pytest.fixture
-def mock_get_data() -> Generator[MagicMock, AsyncMock, None]:
+def mock_get_data() -> Generator[MagicMock, None, None]:
     async_mock = AsyncMock()
     async_mock.side_effect = [DEFAULT_POST_DATA, DEFAULT_COMMENT_DATA]
     with patch("app.services.feed_service.get_data", async_mock):
@@ -104,12 +104,12 @@ def mock_get_data() -> Generator[MagicMock, AsyncMock, None]:
 
 
 @pytest.fixture
-def mock_get_data_factory() -> Generator[MagicMock, AsyncMock, None]:
+def mock_get_data_factory() -> Tuple[MagicMock, AsyncMock]:
     """Return a function that can create a patched get_data mock with given data."""
 
     def _mock_get_data(
         *side_effect_data: List[Any],
-    ) -> Generator[MagicMock, AsyncMock, None]:
+    ) -> Generator[MagicMock, None, None]:
         async_mock = AsyncMock()
         async_mock.side_effect = list(side_effect_data)
         patcher = patch("app.services.feed_service.get_data", async_mock)
@@ -122,7 +122,7 @@ def mock_get_data_factory() -> Generator[MagicMock, AsyncMock, None]:
 @pytest.mark.asyncio
 async def test_get_10_feeds_success(
     mock_logger: MagicMock,
-    mock_get_data: Generator[MagicMock, AsyncMock, None],
+    mock_get_data: Generator[MagicMock, None, None],
 ):
     expected_comment_counts = DEFAULT_COMMENT_COUNT_TABLE
     logger = mock_logger
@@ -154,7 +154,7 @@ async def test_get_10_feeds_success(
 @pytest.mark.asyncio
 async def test_get_10_feeds_success_with_factory(
     mock_logger: MagicMock,
-    mock_get_data_factory: Generator[MagicMock, AsyncMock, None],
+    mock_get_data_factory: tuple[MagicMock, AsyncMock],
 ):
 
     logger = mock_logger
@@ -198,7 +198,7 @@ async def test_get_10_feeds_success_with_factory(
 @pytest.mark.asyncio
 async def test_get_10_feeds_success_empty_response(
     mock_logger: MagicMock,
-    mock_get_data_factory: Generator[MagicMock, AsyncMock, None],
+    mock_get_data_factory: tuple[MagicMock, AsyncMock],
     post_data: List[Dict[str, Any]],
     comment_data: List[Dict[str, Any]],
 ):
@@ -231,7 +231,7 @@ async def test_get_10_feeds_success_empty_response(
 @pytest.mark.asyncio
 async def test_get_10_feeds_raises_service_exception(
     mock_logger: MagicMock,
-    mock_get_data_factory: Generator[MagicMock, AsyncMock, None],
+    mock_get_data_factory: tuple[MagicMock, AsyncMock],
     mock_side_effect: List[Any],
 ):
     logger = mock_logger
