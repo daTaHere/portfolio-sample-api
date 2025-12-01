@@ -138,7 +138,7 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
     return data
 
 
-def create_model_list(input_data: List[Dict[str, any]], model: Type[T]) -> List[T]:
+def create_model_list(input_data: List[Dict[str, Any]], model: Type[T]) -> List[T]:
     """
     Instantiate Post or Comment objects from raw data.
     Logging included for success/failure.

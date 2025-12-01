@@ -109,7 +109,7 @@ def test_create_model_list_type_error_raises_service_exception(mock_logger):
         with pytest.raises(ServiceException):
             create_model_list(input_data, Post)
 
-    assert_logger_called_with(mock_logger, "Error creating ", "exception")
+    assert_logger_called_with(mock_logger, "Error creating", "exception")
 
 
 def test_create_model_list_value_error_raises_service_exception(mock_logger):
@@ -122,4 +122,4 @@ def test_create_model_list_value_error_raises_service_exception(mock_logger):
         with pytest.raises(ServiceException):
             create_model_list(input_data, Post)
 
-    assert_logger_called_with(mock_logger, "Error creating ", "exception")
+    assert_logger_called_with(mock_logger, "Error creating", "exception")

@@ -42,7 +42,7 @@ class Comment:
 
     @property
     def post_id(self):
-        return self._post_id
+        return self._postId
 
     def to_dict(self) -> dict:
         return {
