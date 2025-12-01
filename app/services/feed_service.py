@@ -145,14 +145,9 @@ def create_feed_input(input_data: List[Dict[str, any]], model: Type[T]) -> List[
     """
     try:
         items = [model(d) for d in input_data]
-        logger.info(
-            "Model instances created",
-            extra={"model": model.__name__, "count": len(items)},
-        )
-        return items
-    except Exception as e:
+    except (TypeError, ValueError) as e:
         logger.exception(
-            "Failed creating model instances",
+            f"Error creating {model.__name__} instances",
             extra={
                 "method": "create_feed_input",
                 "model": model.__name__,
@@ -164,6 +159,12 @@ def create_feed_input(input_data: List[Dict[str, any]], model: Type[T]) -> List[
             service_method="create_feed_input",
             model=model.__name__,
         ) from e
+
+    logger.info(
+        "Model instances created",
+        extra={"model": model.__name__, "count": len(items)},
+    )
+    return items
 
 
 async def get_10_feeds(start: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
