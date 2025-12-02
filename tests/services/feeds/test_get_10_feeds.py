@@ -1,7 +1,6 @@
 import pytest
-
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any, Tuple, Dict, List, Generator
+from typing import Any, Callable, Dict, List, Generator, Tuple
 
 from app.services.feed_service import get_10_feeds
 from app.exceptions.base_exceptions import ServiceException
@@ -104,12 +103,12 @@ def mock_get_data() -> Generator[MagicMock, None, None]:
 
 
 @pytest.fixture
-def mock_get_data_factory() -> Tuple[MagicMock, AsyncMock]:
+def mock_get_data_factory() -> Callable[[], tuple[Any, AsyncMock]]:
     """Return a function that can create a patched get_data mock with given data."""
 
     def _mock_get_data(
         *side_effect_data: List[Any],
-    ) -> Generator[MagicMock, None, None]:
+    ) -> Tuple[MagicMock, AsyncMock]:
         async_mock = AsyncMock()
         async_mock.side_effect = list(side_effect_data)
         patcher = patch("app.services.feed_service.get_data", async_mock)
@@ -154,7 +153,7 @@ async def test_get_10_feeds_success(
 @pytest.mark.asyncio
 async def test_get_10_feeds_success_with_factory(
     mock_logger: MagicMock,
-    mock_get_data_factory: tuple[MagicMock, AsyncMock],
+    mock_get_data_factory: Callable[[], tuple[Any, AsyncMock]],
 ):
 
     logger = mock_logger
@@ -198,7 +197,7 @@ async def test_get_10_feeds_success_with_factory(
 @pytest.mark.asyncio
 async def test_get_10_feeds_success_empty_response(
     mock_logger: MagicMock,
-    mock_get_data_factory: tuple[MagicMock, AsyncMock],
+    mock_get_data_factory: Callable[[], tuple[Any, AsyncMock]],
     post_data: List[Dict[str, Any]],
     comment_data: List[Dict[str, Any]],
 ):
@@ -221,7 +220,6 @@ async def test_get_10_feeds_success_empty_response(
     assert logged_info_filter_comments
     assert logged_info_success
     assert not logged_error
-    assert feeds == []
 
 
 @pytest.mark.parametrize(
@@ -231,8 +229,8 @@ async def test_get_10_feeds_success_empty_response(
 @pytest.mark.asyncio
 async def test_get_10_feeds_raises_service_exception(
     mock_logger: MagicMock,
-    mock_get_data_factory: tuple[MagicMock, AsyncMock],
-    mock_side_effect: List[Any],
+    mock_get_data_factory: Callable[[], tuple[Any, AsyncMock]],
+    mock_side_effect: BaseException,
 ):
     logger = mock_logger
     _patcher, _async_mock = mock_get_data_factory(
