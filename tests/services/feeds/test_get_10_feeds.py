@@ -1,0 +1,260 @@
+import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
+from typing import Any, Callable, Dict, List, Generator, Tuple
+
+from app.services.feed_service import get_10_feeds
+from app.exceptions.base_exceptions import ServiceException
+
+DEFAULT_POST_DATA = [
+    {
+        "userId": 1,
+        "id": 1,
+        "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+        "body": "quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto",
+    },
+    {
+        "userId": 1,
+        "id": 2,
+        "title": "qui est esse",
+        "body": "est rerum tempore vitae\nsequi sint nihil reprehenderit dolor beatae ea dolores neque\nfugiat blanditiis voluptate porro vel nihil molestiae ut reiciendis\nqui aperiam non debitis possimus qui neque nisi nulla",
+    },
+    {
+        "userId": 1,
+        "id": 3,
+        "title": "ea molestias quasi exercitationem repellat qui ipsa sit aut",
+        "body": "et iusto sed quo iure\nvoluptatem occaecati omnis eligendi aut ad\nvoluptatem doloribus vel accusantium quis pariatur\nmolestiae porro eius odio et labore et velit aut",
+    },
+    {
+        "userId": 1,
+        "id": 4,
+        "title": "eum et est occaecati",
+        "body": "ullam et saepe reiciendis voluptatem adipisci\nsit amet autem assumenda provident rerum culpa\nquis hic commodi nesciunt rem tenetur doloremque ipsam iure\nquis sunt voluptatem rerum illo velit",
+    },
+    {
+        "userId": 1,
+        "id": 5,
+        "title": "nesciunt quas odio",
+        "body": "repudiandae veniam quaerat sunt sed\nalias aut fugiat sit autem sed est\nvoluptatem omnis possimus esse voluptatibus quis\nest aut tenetur dolor neque",
+    },
+]
+DEFAULT_COMMENT_DATA = [
+    {
+        "postId": 1,
+        "id": 1,
+        "name": "id labore ex et quam laborum",
+        "email": "Eliseo@gardner.biz",
+        "body": "laudantium enim quasi est quidem magnam voluptate ipsam eos\ntempora quo necessitatibus\ndolor quam autem quasi\nreiciendis et nam sapiente accusantium",
+    },
+    {
+        "postId": 1,
+        "id": 2,
+        "name": "quo vero reiciendis velit similique earum",
+        "email": "Jayne_Kuhic@sydney.com",
+        "body": "est natus enim nihil est dolore omnis voluptatem numquam\net omnis occaecati quod ullam at\nvoluptatem error expedita pariatur\nnihil sint nostrum voluptatem reiciendis et",
+    },
+    {
+        "postId": 2,
+        "id": 3,
+        "name": "odio adipisci rerum aut animi",
+        "email": "Nikita@garfield.biz",
+        "body": "quia molestiae reprehenderit quasi aspernatur\naut expedita occaecati aliquam eveniet laudantium\nomnis quibusdam delectus saepe quia accusamus maiores nam est\ncum et ducimus et vero voluptates excepturi deleniti ratione",
+    },
+    {
+        "postId": 1,
+        "id": 4,
+        "name": "alias odio sit",
+        "email": "Lew@alysha.tv",
+        "body": "non et atque\noccaecati deserunt quas accusantium unde odit nobis qui voluptatem\nquia voluptas consequuntur itaque dolor\net qui rerum deleniti ut occaecati",
+    },
+    {
+        "postId": 5,
+        "id": 5,
+        "name": "vero eaque aliquid doloribus et culpa",
+        "email": "Hayden@althea.biz",
+        "body": "harum non quasi et ratione\ntempore iure ex voluptates in ratione\nharum architecto fugit inventore cupiditate\nvoluptates magni quo et",
+    },
+]
+DEFAULT_COMMENT_COUNT_TABLE = {
+    1: 3,
+    2: 1,
+    5: 1,
+    3: 0,
+    4: 0,
+}
+
+
+@pytest.fixture
+def mock_logger() -> Generator[MagicMock, None, None]:
+    with patch("app.services.feed_service.logger") as mock_logger:
+        yield mock_logger
+
+
+def is_logged(mock_logger: MagicMock, message_substr: str, level: str) -> bool:
+    log_method = getattr(mock_logger, level)
+    return any(message_substr in str(call) for call in log_method.call_args_list)
+
+
+@pytest.fixture
+def mock_get_data() -> Generator[MagicMock, None, None]:
+    async_mock = AsyncMock()
+    async_mock.side_effect = [DEFAULT_POST_DATA, DEFAULT_COMMENT_DATA]
+    with patch("app.services.feed_service.get_data", async_mock):
+        yield async_mock
+
+
+@pytest.fixture
+def mock_get_data_factory() -> Callable[[], tuple[Any, AsyncMock]]:
+    """Return a function that can create a patched get_data mock with given data."""
+
+    def _mock_get_data(
+        *side_effect_data: List[Any],
+    ) -> Tuple[MagicMock, AsyncMock]:
+        async_mock = AsyncMock()
+        async_mock.side_effect = list(side_effect_data)
+        patcher = patch("app.services.feed_service.get_data", async_mock)
+        patcher.start()
+        return patcher, async_mock
+
+    return _mock_get_data
+
+
+@pytest.mark.asyncio
+async def test_get_10_feeds_success(
+    mock_logger: MagicMock,
+    mock_get_data: Generator[MagicMock, None, None],
+):
+    expected_comment_counts = DEFAULT_COMMENT_COUNT_TABLE
+    logger = mock_logger
+    _async_mock = mock_get_data
+    feeds = await get_10_feeds(start=0, limit=5)
+
+    logged_info_count = is_logged(logger, "Post_Cnt:", "info")
+    logged_info_filter_comments = is_logged(logger, "Filtered comments by post", "info")
+    logged_info_success = is_logged(logger, "Successfully created", "info")
+    logged_error = is_logged(
+        logger, "Error creating PostWithComments instances", "exception"
+    )
+
+    assert _async_mock.await_count == 2
+    assert isinstance(feeds, List)
+    assert all(isinstance(feed, Dict) for feed in feeds)
+    assert len(feeds) == 5
+    for feed in feeds:
+        feed_id = feed["id"]
+        assert "comments" in feed
+        assert len(feed["comments"]) == expected_comment_counts.get(feed_id, 0)
+        assert all(comment["postId"] == feed_id for comment in feed["comments"])
+    assert logged_info_count
+    assert logged_info_filter_comments
+    assert logged_info_success
+    assert not logged_error
+
+
+@pytest.mark.asyncio
+async def test_get_10_feeds_success_with_factory(
+    mock_logger: MagicMock,
+    mock_get_data_factory: Callable[[], tuple[Any, AsyncMock]],
+):
+
+    logger = mock_logger
+    expected_comment_counts = DEFAULT_COMMENT_COUNT_TABLE
+
+    _patcher, _async_mock = mock_get_data_factory(
+        DEFAULT_POST_DATA, DEFAULT_COMMENT_DATA
+    )
+    feeds = await get_10_feeds(start=0, limit=5)
+    _patcher.stop()
+
+    logged_info_count = is_logged(logger, "Post_Cnt:", "info")
+    logged_info_filter_comments = is_logged(logger, "Filtered comments by post", "info")
+    logged_info_success = is_logged(logger, "Successfully created", "info")
+    logged_error = is_logged(
+        logger, "Error creating PostWithComments instances", "exception"
+    )
+
+    assert _async_mock.await_count == 2
+    assert isinstance(feeds, List)
+    assert all(isinstance(feed, Dict) for feed in feeds)
+    assert len(feeds) == 5
+    for feed in feeds:
+        feed_id = feed["id"]
+        assert "comments" in feed
+        assert len(feed["comments"]) == expected_comment_counts.get(feed_id, 0)
+        assert all(comment["postId"] == feed_id for comment in feed["comments"])
+    assert logged_info_count
+    assert logged_info_filter_comments
+    assert logged_info_success
+    assert not logged_error
+
+
+@pytest.mark.parametrize(
+    "post_data, comment_data",
+    [
+        ([], []),
+        ([], DEFAULT_COMMENT_DATA),
+    ],
+)
+@pytest.mark.asyncio
+async def test_get_10_feeds_success_empty_response(
+    mock_logger: MagicMock,
+    mock_get_data_factory: Callable[[], tuple[Any, AsyncMock]],
+    post_data: List[Dict[str, Any]],
+    comment_data: List[Dict[str, Any]],
+):
+    logger = mock_logger
+    _patcher, _async_mock = mock_get_data_factory(post_data, comment_data)
+    feeds = await get_10_feeds(start=0, limit=5)
+    _patcher.stop()
+
+    logged_info_count = is_logged(logger, "Post_Cnt:", "info")
+    logged_info_filter_comments = is_logged(logger, "Filtered comments by post", "info")
+    logged_info_success = is_logged(logger, "Successfully created", "info")
+    logged_error = is_logged(
+        logger, "Error creating PostWithComments instances", "exception"
+    )
+
+    assert _async_mock.await_count == 2
+    assert isinstance(feeds, List)
+    assert len(feeds) == 0
+    assert logged_info_count
+    assert logged_info_filter_comments
+    assert logged_info_success
+    assert not logged_error
+
+
+@pytest.mark.parametrize(
+    "mock_side_effect",
+    [TypeError("Invalid data"), ValueError("Invalid data")],
+)
+@pytest.mark.asyncio
+async def test_get_10_feeds_raises_service_exception(
+    mock_logger: MagicMock,
+    mock_get_data_factory: Callable[[], tuple[Any, AsyncMock]],
+    mock_side_effect: BaseException,
+):
+    logger = mock_logger
+    _patcher, _async_mock = mock_get_data_factory(
+        DEFAULT_POST_DATA, DEFAULT_COMMENT_DATA
+    )
+
+    with patch(
+        "app.services.feed_service.PostWithComments",
+        side_effect=mock_side_effect,
+    ):
+        with pytest.raises(ServiceException) as exc_info:
+            await get_10_feeds(start=0, limit=5)
+        _patcher.stop()
+
+    logged_info_count = is_logged(logger, "Post_Cnt:", "info")
+    logged_info_filter_comments = is_logged(logger, "Filtered comments by post", "info")
+    logged_info_success = is_logged(logger, "Successfully created", "info")
+    logged_error = is_logged(
+        logger, "Error creating PostWithComments instances", "exception"
+    )
+
+    assert _async_mock.await_count == 2
+    assert logged_info_count
+    assert logged_info_filter_comments
+    assert not logged_info_success
+    assert logged_error
+    assert exc_info.value.service_method == "get_10_feeds"

@@ -149,7 +149,7 @@ def create_model_list(input_data: List[Dict[str, Any]], model: Type[T]) -> List[
         logger.exception(
             f"Error creating {model.__name__} instances",
             extra={
-                "method": "create_model_list",
+                "service_method": "create_model_list",
                 "model": model.__name__,
                 "error": str(e),
             },
@@ -185,24 +185,37 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
     comments_by_post: Dict[int, List[Comment]] = defaultdict(list)
     for c in comments:
         comments_by_post[c._postId].append(c)
-
+    logger.info(
+        "Filtered comments by post",
+        extra={"service_method": "get_10_feeds", "post_count": len(comments_by_post)},
+    )
     try:
         feeds = [
             PostWithComments(post, comments_by_post[post._id]).to_dict()
             for post in posts
         ]
-        logger.info(
-            f"Successfully created {len(feeds)} feed items",
-            extra={"service_method": "get_10_feeds", "model": "PostWithComments"},
-        )
-        return feeds
 
-    except Exception as e:
+    except (TypeError, ValueError) as e:
         logger.exception(
-            "Unexpected error",
-            extra={"service_method": "get_10_feeds", "error": str(e)},
+            "Error creating PostWithComments instances",
+            extra={
+                "service_method": "get_10_feeds",
+                "model": "PostWithComments",
+                "error": str(e),
+            },
         )  # includes stack trace
         raise ServiceException(
             "Internal Server Error: Unexpected error fail to fetch feeds.",
-            extra={"service_method": "get_10_feeds", "model": "PostWithComments"},
+            service_method="get_10_feeds",
+            model="PostWithComments",
         ) from e
+
+    logger.info(
+        f"Successfully created {len(feeds)} feed items",
+        extra={
+            "service_method": "get_10_feeds",
+            "model": "PostWithComments",
+            "feed_count": len(feeds),
+        },
+    )
+    return feeds

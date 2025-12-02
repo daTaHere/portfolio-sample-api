@@ -8,6 +8,9 @@ feed_bp = Blueprint("feeds", __name__)
 
 @feed_bp.route("/feeds", methods=["GET"])
 async def get_feeds():
+    start = request.args.get("start", default=0, type=int)
+    limit = request.args.get("limit", default=10, type=int)
+
     logger.info(
         "Incoming request",
         extra={
@@ -17,7 +20,7 @@ async def get_feeds():
         },
     )
     try:
-        res = await get_10_feeds()
+        res = await get_10_feeds(start=start, limit=limit)
         logger.info(
             "Route response success",
             extra={
