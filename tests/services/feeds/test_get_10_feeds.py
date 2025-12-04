@@ -214,7 +214,7 @@ async def test_get_10_feeds_raises_service_exception(
     ):
         with pytest.raises(ServiceException) as exc_info:
             await get_10_feeds(start=0, limit=5)
-            _patcher.stop()
+        _patcher.stop()
 
     log_counts = count_log_events(captured_logs, "get_10_feeds")
 

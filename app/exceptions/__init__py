@@ -2,9 +2,9 @@ from app.exceptions.base import (
     APIException,
     DatabaseException,
     ServiceException,
-    handle_error,
 )
 from app.exceptions.api import ExternalAPIConnectionError
+from app.exceptions.exception_handlers import handle_error
 
 __all__ = [
     "APIException",

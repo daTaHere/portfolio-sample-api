@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 from collections import Counter
-from typing import Any, List
+from typing import Any, Dict, List
 
 
 def is_logged(mock_logger: MagicMock, level: str, message_substr: str = None) -> bool:
@@ -15,7 +15,7 @@ def is_logged(mock_logger: MagicMock, level: str, message_substr: str = None) ->
     return any(message_substr in str(call) for call in log_method.call_args_list)
 
 
-def count_log_events(logs: List[dict], service_method: str) -> dict[str, Any]:
+def count_log_events(logs: List[Dict], service_method: str) -> Dict[str, Any]:
     counts = Counter(
         log.get("extra", {}).get("event_key", None)
         for log in logs

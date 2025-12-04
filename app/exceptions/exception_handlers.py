@@ -1,5 +1,5 @@
 from app.logging import logger
-from typing import TypeVar, Optional
+from typing import Any, TypeVar, Optional
 from app.models import Post, Comment
 
 T = TypeVar("T", bound=Post | Comment)
@@ -15,7 +15,7 @@ def handle_error(
     method: Optional[str] = "",
     service_method: str = "",
     event_key: str = "ERROR",
-    **extra: Optional[str],
+    **extra: Optional[Any],
 ) -> None:
     """Helper function to log and raise low-level exceptions consistently."""
     logger.error(
@@ -41,7 +41,7 @@ def raise_error(
     method: Optional[str] = "",
     service_method: str = "",
     event_key: str = "ERROR",
-    **extra: Optional[str],
+    **extra: Optional[Any],
 ) -> None:
     """Helper function to log and raise general exceptions consistently."""
     logger.error(

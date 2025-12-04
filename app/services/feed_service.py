@@ -74,7 +74,6 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
                     exc_type=APIException,
                     url=url,
                     service_method="send_request",
-                    event_key="EXHAUSTED_RETRIES",
                 )
             logger.warning(
                 f"Request attempt failed, retrying in {wait_time:.2f}s",
@@ -192,7 +191,6 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
 def create_model_list(input_data: List[Dict[str, Any]], model: Type[T]) -> List[T]:
     """
     Instantiate Post or Comment objects from raw data.
-    logger included for success/failure.
     """
     try:
         items = [model(d) for d in input_data]
