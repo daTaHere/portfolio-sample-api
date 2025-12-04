@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from app import logging
+from app.logging import logger
 from app.services.feed_service import get_10_feeds
 from app.exceptions.base import APIException, ServiceException
 
@@ -11,7 +11,7 @@ async def get_feeds():
     start = request.args.get("start", default=0, type=int)
     limit = request.args.get("limit", default=10, type=int)
 
-    logging.info(
+    logger.info(
         "Incoming request",
         extra={
             "route": "/feeds",
@@ -21,7 +21,7 @@ async def get_feeds():
     )
     try:
         res = await get_10_feeds(start=start, limit=limit)
-        logging.info(
+        logger.info(
             "Route response success",
             extra={
                 "route": "/feeds",
@@ -32,7 +32,7 @@ async def get_feeds():
         return jsonify({"success": True, "data": res}), 200
     except APIException as e:
         # 3rd-party HTTP failure → 502
-        logging.error(
+        logger.error(
             "APIException occurred",
             extra={
                 "route": "/feeds",
@@ -42,7 +42,7 @@ async def get_feeds():
         )
         return jsonify({"success": False, "error": e.message}), 502
     except ServiceException as e:
-        logging.error(
+        logger.error(
             "ServiceException occurred",
             extra={
                 "route": "/feeds",
@@ -52,7 +52,7 @@ async def get_feeds():
         )
         return jsonify({"success": False, "error": e.message}), 500
     except Exception as e:
-        logging.error(
+        logger.error(
             "Unexpected error occurred",
             extra={
                 "route": "/feeds",

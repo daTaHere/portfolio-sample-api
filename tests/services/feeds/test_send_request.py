@@ -4,8 +4,8 @@ import httpx
 
 from app.services.feed_service import send_request
 from app.exceptions.base import APIException, ServiceException
-from typing import Any, List, Generator, Callable
-from unittest.mock import MagicMock, patch
+from typing import Any
+from unittest.mock import patch
 from tests.utils import count_log_events
 
 
@@ -21,7 +21,7 @@ async def test_send_request_success(captured_logs):
     respx.get(url).mock(return_value=httpx.Response(200, json=[{"id": 1}, {"id": 2}]))
     data = await send_request(url)
 
-    log_counts = count_log_events(captured_logs)
+    log_counts = count_log_events(captured_logs, "send_request")
 
     assert isinstance(data, list)
     assert len(data) == 2
@@ -42,7 +42,7 @@ async def test_send_request_empty_response_success(captured_logs):
 
     data = await send_request(url)
 
-    log_counts = count_log_events(captured_logs)
+    log_counts = count_log_events(captured_logs, "send_request")
     assert isinstance(data, list)
     assert len(data) == 0
     assert log_counts.get("ATTEMPTS")
@@ -65,7 +65,7 @@ async def test_send_request_unexpected_json_type_raises_service_exception(
     with pytest.raises(ServiceException):
         await send_request(url)
 
-    log_counts = count_log_events(captured_logs)
+    log_counts = count_log_events(captured_logs, "send_request")
 
     assert log_counts.get("ATTEMPTS")
     assert not log_counts.get("RETRIES")
@@ -83,7 +83,7 @@ async def test_send_request_null_response_raises_service_exception(captured_logs
     with pytest.raises(ServiceException):
         await send_request(url)
 
-    log_counts = count_log_events(captured_logs)
+    log_counts = count_log_events(captured_logs, "send_request")
 
     assert log_counts.get("ATTEMPTS")
     assert not log_counts.get("RETRIES")
@@ -105,7 +105,7 @@ async def test_send_request_decoding_error_raises_api_exception(captured_logs):
         with pytest.raises(APIException) as exc_info:
             await send_request(url)
 
-    log_counts = count_log_events(captured_logs)
+    log_counts = count_log_events(captured_logs, "send_request")
 
     assert log_counts.get("ATTEMPTS")
     assert not log_counts.get("RETRIES")
@@ -123,7 +123,7 @@ async def test_send_request_http_status_raises_api_exception(captured_logs):
     with pytest.raises(APIException) as exc_info:
         await send_request(url)
 
-    log_counts = count_log_events(captured_logs)
+    log_counts = count_log_events(captured_logs, "send_request")
 
     assert log_counts.get("ATTEMPTS") == 1
     assert not log_counts.get("RETRIES")
@@ -141,7 +141,7 @@ async def test_send_request_network_error_raises_api_exception(captured_logs):
     with pytest.raises(APIException) as exc_info:
         await send_request(url)
 
-    log_counts = count_log_events(captured_logs)
+    log_counts = count_log_events(captured_logs, "send_request")
 
     assert log_counts.get("ATTEMPTS") == 3
     assert log_counts.get("RETRIES") == 2
@@ -161,7 +161,7 @@ async def test_send_request_retry_connection_timeout_raises_api_exception(
     with pytest.raises(APIException):
         await send_request(url)
 
-    log_counts = count_log_events(captured_logs)
+    log_counts = count_log_events(captured_logs, "send_request")
 
     assert log_counts.get("ATTEMPTS") == 3
     assert log_counts.get("RETRIES") == 2

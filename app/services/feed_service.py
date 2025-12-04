@@ -7,7 +7,7 @@ import httpx
 import asyncio
 
 from collections import defaultdict
-from typing import Any, Dict, List, Type, TypeVar, Optional
+from typing import Any, Dict, List, Type, TypeVar
 
 from app.logging import logger
 from app.models import Post, Comment, PostWithComments
@@ -16,7 +16,7 @@ from app.exceptions.base import (
     ServiceException,
 )
 
-from app.exceptions.exception_handlers import handle_error
+from app.exceptions.exception_handlers import handle_error, raise_error
 
 JSONPLACEHOLDER_BASE_URL = "https://jsonplaceholder.typicode.com"
 POST_ENDPOINT = "posts"
@@ -106,22 +106,17 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
                 },
             )
     if not isinstance(data, list):
-        logger.error(
-            f"Unexpected response type expected List got {type(data).__name__}",
-            extra={
-                "event_key": "ERROR",
-                "endpoint": url,
-                "method": "GET",
-                "model": endpoint.upper(),
-                "service_method": "send_request",
-                "received_type": type(data).__name__,
-            },
-        )
-        raise ServiceException(
+        raise_error(
             f"Internal server error: expected type List got {type(data).__name__}",
+            f"Unexpected response type expected List got {type(data).__name__}",
+            exc_type=ServiceException,
+            url=url,
+            method="GET",
             service_method="send_request",
+            event_key="ERROR",
+            model=endpoint.upper(),
+            received_type=type(data).__name__,
         )
-
     logger.info(
         "Successful response received",
         extra={
@@ -143,44 +138,44 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
     """
     url = f"{JSONPLACEHOLDER_BASE_URL}/{endpoint}?_start={start}&_limit={limit}"
     logger.info(
-        f"Construct Endpoint",
-        extra={"event_key": "ENDPOINT_URL", "endpoint": url, "method": "get_data"},
+        f"Constructing endpoint URL",
+        extra={
+            "event_key": "ENDPOINT_URL",
+            "endpoint": url,
+            "service_method": "get_data",
+        },
+    )
+
+    logger.info(
+        f"Attempt request for {endpoint.upper()}",
+        extra={
+            "event_key": "REQUEST_ATTEMPT",
+            "endpoint": url,
+            "service_method": "get_data",
+        },
     )
 
     data = await send_request(url)
-    logger.info(
-        f"Attempt request for {endpoint.upper()}",
-        extra={"event_key": "REQUEST_ATTEMPT", "endpoint": url, "method": "get_data"},
-    )
+
     if not isinstance(data, list) or (len(data) > 0 and not isinstance(data[0], dict)):
-        logger.error(
+        raise_error(
+            f"Internal Server Error: expected List of objects got {type(data).__name__}",
             f"Unexpected response type expected List of objects got {type(data).__name__}",
-            extra={
-                "event_key": "ERROR",
-                "service_method": "get_data",
-                "model": endpoint.upper(),
-                "received_type": type(data).__name__,
-            },
-        )
-        raise ServiceException(
-            f"Internal Server Error: expected type List got {type(data).__name__}",
+            exc_type=ServiceException,
+            url=url,
+            method="GET",
             service_method="get_data",
             model=endpoint.upper(),
+            received_type=type(data).__name__,
         )
     if len(data) > limit:
-        logger.error(
-            f"Response item count mismatch",
-            extra={
-                "event_key": "ERROR",
-                "method": "get_data",
-                "model": endpoint.upper(),
-                "count": len(data),
-            },
-        )
-        raise ServiceException(
+        raise_error(
             f"Internal Server Error Received: {len(data)} items, Expected: up to {limit} items.",
+            f"Response item count mismatch",
+            exc_type=ServiceException,
+            url=url,
+            method="GET",
             service_method="get_data",
-            model=endpoint.upper(),
         )
     logger.info(
         f"Successful response received",
@@ -218,7 +213,7 @@ def create_model_list(input_data: List[Dict[str, Any]], model: Type[T]) -> List[
             exc_type=ServiceException,
             service_method="create_model_list",
             model=model.__name__,
-            method=None,
+            method="create_model_list",
         )
     logger.info(
         "Success List of model instances created",
@@ -260,7 +255,7 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
     for c in comments:
         comments_by_post[c._postId].append(c)
     logger.info(
-        "Filtered Comments by Post",
+        "Filtered comments by post",
         extra={
             "event_key": "FILTERED_COMMENTS",
             "service_method": "get_10_feeds",
@@ -272,7 +267,6 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
             PostWithComments(post, comments_by_post[post._id]).to_dict()
             for post in posts
         ]
-
     except (TypeError, ValueError) as e:
         handle_error(
             e,
@@ -280,7 +274,7 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
             "Error creating PostWithComments instances",
             exc_type=ServiceException,
             service_method="get_10_feeds",
-            model=PostWithComments.__name__,
+            model="PostWithComments",
             event_key="ERROR",
         )
     logger.info(
@@ -288,8 +282,9 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
         extra={
             "event_key": "SUCCESS",
             "service_method": "get_10_feeds",
-            "model": PostWithComments.__name__,
+            "model": "PostWithComments",
             "feed_count": len(feeds),
         },
     )
+
     return feeds

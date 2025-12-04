@@ -1,8 +1,8 @@
 import pytest
 
-from unittest.mock import MagicMock, patch
-from typing import Any, Dict, List, Generator, Type, TypeVar
-from tests.utils import count_log_events, is_logged
+from unittest.mock import patch
+from typing import Dict, List, Type, TypeVar
+from tests.utils import count_log_events
 
 from app.services.feed_service import create_model_list
 from app.models.post_detail_model import Post, Comment
@@ -65,14 +65,14 @@ def test_create_model_list_success(
 ):
 
     result = create_model_list(input_data, model)
-    log_counts = count_log_events(captured_logs)
+    log_counts = count_log_events(captured_logs, "create_model_list")
 
     assert isinstance(result, List)
     assert (
         len(model.__slots__) == expected_slots
     )  # Verify class is not attaching unexpected attr
     assert all(
-        isinstance(item, model) for item in result if not hasattr(item, "userId")
+        isinstance(item, model) for item in result
     )  # Test for both Post and Comment neither has userId specifically for Post
     assert len(result) == 2
     assert result[0].id == 2
@@ -86,7 +86,7 @@ def test_create_model_list_success_empty_response(captured_logs):
     input_data = []
 
     result = create_model_list(input_data, Post)
-    log_counts = count_log_events(captured_logs)
+    log_counts = count_log_events(captured_logs, "create_model_list")
 
     assert isinstance(result, List)
     assert all(isinstance(item, Post) for item in result)
@@ -113,7 +113,7 @@ def test_create_model_list_type_error_raises_service_exception(
             with pytest.raises(ServiceException):
                 create_model_list(input_data, test_model)
 
-    log_counts = count_log_events(captured_logs)
+    log_counts = count_log_events(captured_logs, "create_model_list")
 
     assert not log_counts.get("CREATE_MODEL_LIST")
     assert not log_counts.get("SUCCESS")

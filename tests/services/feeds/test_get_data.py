@@ -1,9 +1,8 @@
 import pytest
 
-
 from unittest.mock import MagicMock, patch
 from typing import Any, Dict, Generator, List
-from tests.utils import count_log_events, is_logged
+from tests.utils import count_log_events
 
 from app.services.feed_service import get_data
 from app.exceptions.base import ServiceException
@@ -51,7 +50,7 @@ async def test_get_data_success(
     res = await get_data(endpoint, start, limit)
 
     mock_send_request.assert_called_once_with(expected_url)
-    log_counts = count_log_events(captured_logs)
+    log_counts = count_log_events(captured_logs, "get_data")
 
     assert res == test_data
     assert isinstance(res, list)
@@ -78,7 +77,7 @@ async def test_get_data_response_empty_success(
     mock_send_request.return_value = fake_data
     res = await get_data(endpoint, start, limit)
 
-    log_counts = count_log_events(captured_logs)
+    log_counts = count_log_events(captured_logs, "get_data")
 
     mock_send_request.assert_called_once_with(expected_url)
     assert res == fake_data
@@ -114,7 +113,7 @@ async def test_get_data_response_items_within_limit_success(
     mock_send_request.return_value = test_data
     res = await get_data(endpoint, start, limit)
 
-    log_counts = count_log_events(captured_logs)
+    log_counts = count_log_events(captured_logs, "get_data")
 
     mock_send_request.assert_called_once_with(expected_url)
     assert len(res) == expected_count
@@ -157,7 +156,7 @@ async def test_get_data_response_count_mismatch_raises_service_exception(
     with pytest.raises(ServiceException) as exc_info:
         await get_data(endpoint, start, limit)
 
-    log_counts = count_log_events(captured_logs)
+    log_counts = count_log_events(captured_logs, "get_data")
 
     mock_send_request.assert_called_once_with(expected_url)
     assert len(mock_send_request.return_value) > limit
@@ -193,9 +192,9 @@ async def test_get_data_type_error_raises_service_exception(
     with pytest.raises(ServiceException) as exc_info:
         await get_data(endpoint, start, limit)
 
-    log_counts = count_log_events(captured_logs)
-    assert f"expected type List got {data_type.__name__}" in str(exc_info.value)
+    log_counts = count_log_events(captured_logs, "get_data")
 
+    assert f"Internal Server Error: expected List" in str(exc_info.value)
     assert log_counts.get("ENDPOINT_URL")
     assert log_counts.get("REQUEST_ATTEMPT")
     assert not log_counts.get("SUCCESS")
