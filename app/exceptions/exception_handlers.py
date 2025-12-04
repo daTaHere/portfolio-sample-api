@@ -1,8 +1,5 @@
 from app.logging import logger
-from typing import Any, TypeVar, Optional
-from app.models import Post, Comment
-
-T = TypeVar("T", bound=Post | Comment)
+from typing import Any, Optional
 
 
 def handle_error(

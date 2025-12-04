@@ -4,7 +4,7 @@ from typing import Any, Callable, Dict, List, Generator, Tuple
 
 from app.services.feed_service import get_10_feeds
 from app.exceptions.base import ServiceException
-from tests.utils import count_log_events, is_logged
+from tests.utils import count_log_events
 
 DEFAULT_POST_DATA = [
     {

@@ -53,15 +53,14 @@ async def test_send_request_empty_response_success(captured_logs):
 
 @pytest.mark.asyncio
 @respx.mock
-@pytest.mark.parametrize("bad_json", [123, True, "string", {"key": "value"}])
+@pytest.mark.parametrize("bad_test_data", [123, True, "string", {"key": "value"}])
 async def test_send_request_unexpected_json_type_raises_service_exception(
     captured_logs,
-    bad_json: Any,
+    bad_test_data: Any,
 ):
     url = BASE_URL
     # mock a 200 response with bad JSON type
-    respx.get(url).mock(return_value=httpx.Response(200, json=bad_json))
-
+    respx.get(url).mock(return_value=httpx.Response(200, json=bad_test_data))
     with pytest.raises(ServiceException):
         await send_request(url)
 
@@ -126,6 +125,7 @@ async def test_send_request_http_status_raises_api_exception(captured_logs):
 
     log_counts = count_log_events(captured_logs, "send_request")
 
+    assert f"External API Error: Bad status code: 500" in str(exc_info.value)
     assert log_counts.get("ATTEMPTS") == 1
     assert not log_counts.get("RETRIES")
     assert not log_counts.get("SUCCESS")

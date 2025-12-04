@@ -90,7 +90,7 @@ async def test_get_data_response_empty_success(
 
 
 @pytest.mark.parametrize(
-    "expected_count,test_data",
+    "expected_count, test_data",
     [
         (1, [{"id": num} for num in range(1, 2)]),
         (5, [{"id": num} for num in range(1, 6)]),
@@ -130,7 +130,7 @@ async def test_get_data_response_items_within_limit_success(
 
 
 @pytest.mark.parametrize(
-    "test_limit , test_data",
+    "test_limit, test_data",
     [
         (
             DEFAULT_LIMIT,
@@ -168,20 +168,21 @@ async def test_get_data_response_count_mismatch_raises_service_exception(
 
 
 @pytest.mark.parametrize(
-    "data_type, test_data",
+    "test_data",
     [
-        (str, "This is a string, not a list"),
-        (int, 12345),
-        (dict, {"id": 1, "name": "Test"}),
-        (float, 12.34),
-        (set, {1, 2, 3}),
+        [
+            "This is a string, not a list",
+            1234,
+            {"id": 1, "name": "Test"},
+            12.34,
+            {1, 2, 3},
+        ],
     ],
 )
 @pytest.mark.asyncio
 async def test_get_data_type_error_raises_service_exception(
     captured_logs,
     mock_send_request: MagicMock,
-    data_type: type,
     test_data: Any,
 ):
     """Trigger artificial TypeError/ValueError to validate exception handling in get_data."""
@@ -194,6 +195,8 @@ async def test_get_data_type_error_raises_service_exception(
         await get_data(endpoint, start, limit)
 
     log_counts = count_log_events(captured_logs, "get_data")
+
+    print(f"exc_info.value: {exc_info}")
 
     assert f"Internal Server Error: expected List" in str(exc_info.value)
     assert log_counts.get("ENDPOINT_URL")

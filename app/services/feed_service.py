@@ -54,6 +54,7 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
 
                 try:
                     data = res.json()
+                    break  # exit retry loop on success
                 except httpx.DecodingError as e:
                     handle_error(
                         e,
@@ -70,7 +71,7 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
                 handle_error(
                     e,
                     "External API Error: Unreachable",
-                    "Request failed Exhausted all retries.",
+                    "Request failed. Exhausted all retries.",
                     exc_type=APIException,
                     url=url,
                     service_method="send_request",
