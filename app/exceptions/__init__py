@@ -4,7 +4,7 @@ from app.exceptions.base import (
     ServiceException,
 )
 from app.exceptions.api import ExternalAPIConnectionError
-from app.exceptions.exception_handlers import handle_error
+from app.exceptions.exception_handlers import handle_error, raise_error
 
 __all__ = [
     "APIException",
@@ -12,4 +12,5 @@ __all__ = [
     "ExternalAPIConnectionError",
     "ServiceException",
     "handle_error",
+    "raise_error",
 ]

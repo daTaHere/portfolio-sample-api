@@ -1,5 +1,5 @@
 from app.logging import logger
-from typing import Any, Optional
+from typing import Any, Optional, Type
 
 
 def handle_error(
@@ -7,7 +7,7 @@ def handle_error(
     exc_message: str,
     log_message: str,
     *,
-    exc_type: type[Exception],
+    exc_type: Type[Exception],
     url: Optional[str] = "",
     method: Optional[str] = "",
     service_method: str = "",
@@ -33,7 +33,7 @@ def raise_error(
     exc_message: str,
     log_message: str,
     *,
-    exc_type: type[Exception],
+    exc_type: Type[Exception],
     url: Optional[str] = "",
     method: Optional[str] = "",
     service_method: str = "",

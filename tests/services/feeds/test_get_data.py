@@ -170,13 +170,11 @@ async def test_get_data_response_count_mismatch_raises_service_exception(
 @pytest.mark.parametrize(
     "test_data",
     [
-        [
-            "This is a string, not a list",
-            1234,
-            {"id": 1, "name": "Test"},
-            12.34,
-            {1, 2, 3},
-        ],
+        "This is a string, not a list",
+        1234,
+        {"id": 1, "name": "Test"},
+        12.34,
+        {1, 2, 3},
     ],
 )
 @pytest.mark.asyncio
@@ -195,8 +193,6 @@ async def test_get_data_type_error_raises_service_exception(
         await get_data(endpoint, start, limit)
 
     log_counts = count_log_events(captured_logs, "get_data")
-
-    print(f"exc_info.value: {exc_info}")
 
     assert f"Internal Server Error: expected List" in str(exc_info.value)
     assert log_counts.get("ENDPOINT_URL")

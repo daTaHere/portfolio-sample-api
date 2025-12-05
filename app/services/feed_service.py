@@ -176,6 +176,7 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
             url=url,
             method="GET",
             service_method="get_data",
+            model=endpoint.upper(),
         )
     logger.info(
         f"Successful response received",
@@ -274,7 +275,6 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
             exc_type=ServiceException,
             service_method="get_10_feeds",
             model="PostWithComments",
-            event_key="ERROR",
         )
     logger.info(
         f"Successfully created {len(feeds)} feed items",
