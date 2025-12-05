@@ -117,6 +117,7 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
             model=endpoint.upper(),
             received_type=type(data).__name__,
         )
+
     logger.info(
         "Successful response received",
         extra={

@@ -8,7 +8,7 @@ from typing import Generator
 def mock_logger() -> Generator[MagicMock, None, None]:
     """Patch the logger used in app.services.feed_service and yield the mock logger object."""
 
-    with patch(f"app.services.feed_service.logger") as mock_logger:
+    with patch("app.services.feed_service.logger") as mock_logger:
         yield mock_logger
 
 

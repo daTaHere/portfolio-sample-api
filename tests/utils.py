@@ -17,8 +17,9 @@ def is_logged(mock_logger: MagicMock, level: str, message_substr: str = None) ->
 
 def count_log_events(logs: List[Dict], service_method: str) -> Dict[str, Any]:
     """
-    Helper function to count log events by their event_key for a specific
-    service_method."""
+    Helper function to count log event occurrences by their event_key for a specific
+    service_method.
+    """
 
     counts = Counter(
         log.get("extra", {}).get("event_key", None)
