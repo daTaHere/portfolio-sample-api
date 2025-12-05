@@ -1,11 +1,14 @@
 import pytest
 
-from unittest.mock import MagicMock, patch
-from typing import Generator, List
+from unittest.mock import patch
+from typing import Dict, List, Type, TypeVar
+from tests.utils import count_log_events
 
 from app.services.feed_service import create_model_list
 from app.models.post_detail_model import Post, Comment
-from app.exceptions.base_exceptions import ServiceException
+from app.exceptions.base import ServiceException
+
+T = TypeVar("T", bound=Post | Comment)
 
 ERROR_TEST_DATA = [
     {
@@ -47,22 +50,6 @@ DEFAULT_COMMENT_DATA = (
 )
 
 
-@pytest.fixture
-def mock_logger() -> Generator[MagicMock, None, None]:
-    with patch("app.services.feed_service.logger") as mock_log:
-        yield mock_log
-
-
-def assert_logger_called_with(
-    mock_logger: MagicMock, message_substr: str, level: str
-) -> None:
-    log_method = getattr(mock_logger, level)
-    if not any(message_substr in str(call) for call in log_method.call_args_list):
-        raise AssertionError(
-            f"Expected '{message_substr}' to be logged at level '{level}'"
-        )
-
-
 @pytest.mark.parametrize(
     "input_data, model, expected_slots",
     [
@@ -70,56 +57,64 @@ def assert_logger_called_with(
         DEFAULT_COMMENT_DATA,
     ],
 )
-def test_create_model_list_success(mock_logger, input_data, model, expected_slots):
+def test_create_model_list_success(
+    captured_logs,
+    input_data: List[Dict],
+    model: Type[T],
+    expected_slots: int,
+):
 
     result = create_model_list(input_data, model)
-    assert_logger_called_with(mock_logger, "Model instances created", "info")
+    log_counts = count_log_events(captured_logs, "create_model_list")
 
     assert isinstance(result, List)
-    assert len(model.__slots__) == expected_slots
-    assert all(isinstance(item, model) for item in result)
+    assert (
+        len(model.__slots__) == expected_slots
+    )  # Verify class is not attaching unexpected attr
+    assert all(
+        isinstance(item, model) for item in result
+    )  # Test for both Post and Comment neither has userId specifically for Post
     assert len(result) == 2
     assert result[0].id == 2
     assert result[-1].id == 3
-    if model == Post:
-        assert all(
-            not hasattr(item, "userId") for item in result
-        )  # userId should not leak into model instances
+    assert log_counts.get("CREATE_MODEL_LIST")
+    assert log_counts.get("SUCCESS")
+    assert not log_counts.get("ERROR")
 
 
-def test_create_model_list_success_empty_response(mock_logger):
+def test_create_model_list_success_empty_response(captured_logs):
     input_data = []
 
     result = create_model_list(input_data, Post)
-
-    assert_logger_called_with(mock_logger, "Model instances created", "info")
+    log_counts = count_log_events(captured_logs, "create_model_list")
 
     assert isinstance(result, List)
     assert all(isinstance(item, Post) for item in result)
     assert len(result) == 0
+    assert log_counts.get("CREATE_MODEL_LIST")
+    assert log_counts.get("SUCCESS")
+    assert not log_counts.get("ERROR")
 
 
-def test_create_model_list_type_error_raises_service_exception(mock_logger):
+@pytest.mark.parametrize(
+    "test_model",
+    [Post, Comment],
+)
+def test_create_model_list_type_error_raises_service_exception(
+    captured_logs, test_model: Type[T]
+):
     input_data = ERROR_TEST_DATA
+    for error in [TypeError("Invalid data"), ValueError("Invalid data")]:
+        with patch.object(
+            test_model,
+            "__init__",
+            side_effect=error,
+        ):
+            with pytest.raises(ServiceException):
+                create_model_list(input_data, test_model)
 
-    with patch(
-        "app.services.feed_service.Post.__init__",
-        side_effect=TypeError("Invalid data"),
-    ):
-        with pytest.raises(ServiceException):
-            create_model_list(input_data, Post)
+    log_counts = count_log_events(captured_logs, "create_model_list")
 
-    assert_logger_called_with(mock_logger, "Error creating", "exception")
-
-
-def test_create_model_list_value_error_raises_service_exception(mock_logger):
-    input_data = ERROR_TEST_DATA
-
-    with patch(
-        "app.services.feed_service.Post.__init__",
-        side_effect=ValueError("Invalid data"),
-    ):
-        with pytest.raises(ServiceException):
-            create_model_list(input_data, Post)
-
-    assert_logger_called_with(mock_logger, "Error creating", "exception")
+    assert not log_counts.get("CREATE_MODEL_LIST")
+    assert not log_counts.get("SUCCESS")
+    assert log_counts.get("ERROR")

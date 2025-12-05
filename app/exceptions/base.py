@@ -7,8 +7,8 @@ class APIException(Exception):
     def __init__(
         self,
         message: str,
-        endpoint: str = None,
-        method: str = None,
+        endpoint: str,
+        method: str,
         original_exception: Exception = None,
     ):
         self.endpoint = endpoint
@@ -23,13 +23,15 @@ class ServiceException(Exception):
     def __init__(
         self,
         message: str,
-        service_method: str = None,
+        endpoint: str,
+        method: str,
         model: str = None,
         key: str = None,
         original_exception: Exception = None,
     ):
-        self.service_method = service_method
+        self.endpoint = endpoint
         self.model = model
+        self.method = method
         self.key = key
         self.original_exception = original_exception
         super().__init__(message)

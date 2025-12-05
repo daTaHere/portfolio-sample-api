@@ -1,8 +1,11 @@
 import pytest
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+from typing import Any, Dict, Generator, List
+from tests.utils import count_log_events
+
 from app.services.feed_service import get_data
-from app.exceptions.base_exceptions import ServiceException
+from app.exceptions.base import ServiceException
 
 DEFAULT_BASE_URL = "https://jsonplaceholder.typicode.com"
 DEFAULT_ENDPOINT = "posts"
@@ -11,33 +14,60 @@ DEFAULT_LIMIT = 2
 
 
 @pytest.fixture
-def mock_send_request():
+def mock_send_request() -> Generator[MagicMock, None, None]:
     with patch("app.services.feed_service.send_request") as mock_send:
         yield mock_send
 
 
+@pytest.mark.parametrize(
+    "start, limit, test_data",
+    [
+        (
+            DEFAULT_START,
+            DEFAULT_LIMIT,
+            [{"id": num + 1} for num in range(0, DEFAULT_LIMIT)],
+        ),
+        (DEFAULT_START, 5, [{"id": num + 1} for num in range(0, 5)]),
+        (
+            DEFAULT_START,
+            10,
+            [{"id": num + 1} for num in range(0, 10)],
+        ),
+    ],
+)
 @pytest.mark.asyncio
-async def test_get_data_success(mock_send_request):
+async def test_get_data_success(
+    captured_logs,
+    mock_send_request: MagicMock,
+    start: int,
+    limit: int,
+    test_data: List[Dict[str, Any]],
+):
     endpoint = DEFAULT_ENDPOINT
-    start = DEFAULT_START
-    limit = DEFAULT_LIMIT
-    fake_data = [{"id": 1}, {"id": 2}]
     expected_url = f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit}"
 
-    mock_send_request.return_value = fake_data
+    mock_send_request.return_value = test_data
     res = await get_data(endpoint, start, limit)
 
     mock_send_request.assert_called_once_with(expected_url)
-    assert res == fake_data
+    log_counts = count_log_events(captured_logs, "get_data")
+
+    assert res == test_data
     assert isinstance(res, list)
     assert len(res) == limit  # test assumes response length equals limit exactly
     assert all(isinstance(item, dict) for item in res)
     assert res[0]["id"] == start + 1
     assert res[-1]["id"] == len(res)
+    assert log_counts.get("ENDPOINT_URL")
+    assert log_counts.get("REQUEST_ATTEMPT")
+    assert log_counts.get("SUCCESS")
+    assert not log_counts.get("ERROR")
 
 
 @pytest.mark.asyncio
-async def test_get_data_response_empty_success(mock_send_request):
+async def test_get_data_response_empty_success(
+    captured_logs, mock_send_request: MagicMock
+):
     endpoint = DEFAULT_ENDPOINT
     start = DEFAULT_START
     limit = 0
@@ -47,81 +77,125 @@ async def test_get_data_response_empty_success(mock_send_request):
     mock_send_request.return_value = fake_data
     res = await get_data(endpoint, start, limit)
 
+    log_counts = count_log_events(captured_logs, "get_data")
+
     mock_send_request.assert_called_once_with(expected_url)
     assert res == fake_data
     assert isinstance(res, list)
     assert len(res) == 0
+    assert log_counts.get("ENDPOINT_URL")
+    assert log_counts.get("REQUEST_ATTEMPT")
+    assert log_counts.get("SUCCESS")
+    assert not log_counts.get("ERROR")
 
 
-@pytest.mark.parametrize("valid_limits", [2, 5, 8, 10])
+@pytest.mark.parametrize(
+    "expected_count, test_data",
+    [
+        (1, [{"id": num} for num in range(1, 2)]),
+        (5, [{"id": num} for num in range(1, 6)]),
+        (8, [{"id": num} for num in range(1, 9)]),
+        (10, [{"id": num} for num in range(1, 11)]),
+    ],
+)
 @pytest.mark.asyncio
 async def test_get_data_response_items_within_limit_success(
-    mock_send_request, valid_limits
+    captured_logs,
+    mock_send_request: MagicMock,
+    expected_count: int,
+    test_data: List[Dict[str, Any]],
 ):
     endpoint = DEFAULT_ENDPOINT
     start = DEFAULT_START
     limit = 10
-    # generate fake data 1 item less requested limit to test boundary or equal to 10
-    # id values starting from 1 indexed
-    fake_data = [
-        {"id": i + 1}
-        for i in range(0, valid_limits - 1 if valid_limits != 10 else valid_limits)
-    ]  # return items within requested limit
     expected_url = f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit}"
 
-    mock_send_request.return_value = fake_data
+    mock_send_request.return_value = test_data
     res = await get_data(endpoint, start, limit)
 
+    log_counts = count_log_events(captured_logs, "get_data")
+
     mock_send_request.assert_called_once_with(expected_url)
-    assert res == fake_data
+    assert len(res) == expected_count
+    assert len(res) <= limit
+    assert res == test_data
     assert isinstance(res, list)
     assert all(isinstance(item, dict) for item in res)
-    assert len(res) <= limit
     assert res[0]["id"] == start + 1
-    assert res[-1]["id"] == len(fake_data)
+    assert res[-1]["id"] == len(test_data)
+    assert log_counts.get("ENDPOINT_URL")
+    assert log_counts.get("REQUEST_ATTEMPT")
+    assert log_counts.get("SUCCESS")
+    assert not log_counts.get("ERROR")
 
 
+@pytest.mark.parametrize(
+    "test_limit, test_data",
+    [
+        (
+            DEFAULT_LIMIT,
+            [{"id": num} for num in range(1, 4)],
+        ),
+        (5, [{"id": num} for num in range(1, 7)]),
+        (10, [{"id": num} for num in range(1, 12)]),
+    ],
+)
 @pytest.mark.asyncio
 async def test_get_data_response_count_mismatch_raises_service_exception(
-    mock_send_request,
+    captured_logs,
+    mock_send_request: MagicMock,
+    test_limit: int,
+    test_data: List[Dict[str, Any]],
 ):
     endpoint = DEFAULT_ENDPOINT
     start = DEFAULT_START
-    limit = DEFAULT_LIMIT
-    fake_data = [{"id": i + 1} for i in range(0, 3)]  # 3 items returned requested 2
+    limit = test_limit
     expected_url = f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit}"
 
-    mock_send_request.return_value = fake_data
-    with patch("app.services.feed_service.logger") as mock_logger:
-        with pytest.raises(ServiceException):
-            await get_data(endpoint, start, limit)
+    mock_send_request.return_value = test_data
+    with pytest.raises(ServiceException) as exc_info:
+        await get_data(endpoint, start, limit)
 
-    logged_error_calls = [
-        call
-        for call in mock_logger.error.call_args_list
-        if "Response item count mismatch" in str(call)
-    ]
+    log_counts = count_log_events(captured_logs, "get_data")
 
     mock_send_request.assert_called_once_with(expected_url)
-    assert len(logged_error_calls) == 1
+    assert f"Internal Server Error Received:" in str(exc_info.value)
+    assert len(mock_send_request.return_value) > limit
+    assert log_counts.get("ENDPOINT_URL")
+    assert log_counts.get("REQUEST_ATTEMPT")
+    assert not log_counts.get("SUCCESS")
+    assert log_counts.get("ERROR")
 
 
+@pytest.mark.parametrize(
+    "test_data",
+    [
+        "This is a string, not a list",
+        1234,
+        {"id": 1, "name": "Test"},
+        12.34,
+        {1, 2, 3},
+    ],
+)
 @pytest.mark.asyncio
-async def test_get_data_type_error_raises_service_exception(mock_send_request):
+async def test_get_data_type_error_raises_service_exception(
+    captured_logs,
+    mock_send_request: MagicMock,
+    test_data: Any,
+):
     """Trigger artificial TypeError/ValueError to validate exception handling in get_data."""
-    endpoint = None
+    endpoint = DEFAULT_ENDPOINT
     start = DEFAULT_START
     limit = DEFAULT_LIMIT
 
-    mock_send_request.side_effect = TypeError("Invalid endpoint type")
-    with patch("app.services.feed_service.logger") as mock_logger:
-        with pytest.raises(ServiceException):
-            await get_data(endpoint, start, limit)
+    mock_send_request.return_value = test_data
+    with pytest.raises(ServiceException) as exc_info:
+        await get_data(endpoint, start, limit)
 
-    logged_error_calls = [
-        call
-        for call in mock_logger.error.call_args_list
-        if "Unexpected error in get_data" in str(call)
-    ]
+    log_counts = count_log_events(captured_logs, "get_data")
 
-    assert len(logged_error_calls) == 1
+    assert f"Internal Server Error: expected List" in str(exc_info.value)
+    assert log_counts.get("ENDPOINT_URL")
+    assert log_counts.get("REQUEST_ATTEMPT")
+    assert not log_counts.get("SUCCESS")
+    assert log_counts.get("ERROR")

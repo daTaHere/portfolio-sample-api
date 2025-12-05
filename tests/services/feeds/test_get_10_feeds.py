@@ -3,7 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Any, Callable, Dict, List, Generator, Tuple
 
 from app.services.feed_service import get_10_feeds
-from app.exceptions.base_exceptions import ServiceException
+from app.exceptions.base import ServiceException
+from tests.utils import count_log_events
 
 DEFAULT_POST_DATA = [
     {
@@ -84,17 +85,6 @@ DEFAULT_COMMENT_COUNT_TABLE = {
 
 
 @pytest.fixture
-def mock_logger() -> Generator[MagicMock, None, None]:
-    with patch("app.services.feed_service.logger") as mock_logger:
-        yield mock_logger
-
-
-def is_logged(mock_logger: MagicMock, message_substr: str, level: str) -> bool:
-    log_method = getattr(mock_logger, level)
-    return any(message_substr in str(call) for call in log_method.call_args_list)
-
-
-@pytest.fixture
 def mock_get_data() -> Generator[MagicMock, None, None]:
     async_mock = AsyncMock()
     async_mock.side_effect = [DEFAULT_POST_DATA, DEFAULT_COMMENT_DATA]
@@ -120,20 +110,14 @@ def mock_get_data_factory() -> Callable[[], tuple[Any, AsyncMock]]:
 
 @pytest.mark.asyncio
 async def test_get_10_feeds_success(
-    mock_logger: MagicMock,
+    captured_logs,
     mock_get_data: Generator[MagicMock, None, None],
 ):
     expected_comment_counts = DEFAULT_COMMENT_COUNT_TABLE
-    logger = mock_logger
     _async_mock = mock_get_data
     feeds = await get_10_feeds(start=0, limit=5)
 
-    logged_info_count = is_logged(logger, "Post_Cnt:", "info")
-    logged_info_filter_comments = is_logged(logger, "Filtered comments by post", "info")
-    logged_info_success = is_logged(logger, "Successfully created", "info")
-    logged_error = is_logged(
-        logger, "Error creating PostWithComments instances", "exception"
-    )
+    log_counts = count_log_events(captured_logs, "get_10_feeds")
 
     assert _async_mock.await_count == 2
     assert isinstance(feeds, List)
@@ -144,19 +128,18 @@ async def test_get_10_feeds_success(
         assert "comments" in feed
         assert len(feed["comments"]) == expected_comment_counts.get(feed_id, 0)
         assert all(comment["postId"] == feed_id for comment in feed["comments"])
-    assert logged_info_count
-    assert logged_info_filter_comments
-    assert logged_info_success
-    assert not logged_error
+    assert log_counts.get("FETCH_COUNTS")
+    assert log_counts.get("FILTERED_COMMENTS")
+    assert log_counts.get("SUCCESS")
+    assert not log_counts.get("ERROR")
 
 
 @pytest.mark.asyncio
 async def test_get_10_feeds_success_with_factory(
-    mock_logger: MagicMock,
+    captured_logs,
     mock_get_data_factory: Callable[[], tuple[Any, AsyncMock]],
 ):
 
-    logger = mock_logger
     expected_comment_counts = DEFAULT_COMMENT_COUNT_TABLE
 
     _patcher, _async_mock = mock_get_data_factory(
@@ -165,12 +148,7 @@ async def test_get_10_feeds_success_with_factory(
     feeds = await get_10_feeds(start=0, limit=5)
     _patcher.stop()
 
-    logged_info_count = is_logged(logger, "Post_Cnt:", "info")
-    logged_info_filter_comments = is_logged(logger, "Filtered comments by post", "info")
-    logged_info_success = is_logged(logger, "Successfully created", "info")
-    logged_error = is_logged(
-        logger, "Error creating PostWithComments instances", "exception"
-    )
+    log_counts = count_log_events(captured_logs, "get_10_feeds")
 
     assert _async_mock.await_count == 2
     assert isinstance(feeds, List)
@@ -181,10 +159,10 @@ async def test_get_10_feeds_success_with_factory(
         assert "comments" in feed
         assert len(feed["comments"]) == expected_comment_counts.get(feed_id, 0)
         assert all(comment["postId"] == feed_id for comment in feed["comments"])
-    assert logged_info_count
-    assert logged_info_filter_comments
-    assert logged_info_success
-    assert not logged_error
+    assert log_counts.get("FETCH_COUNTS")
+    assert log_counts.get("FILTERED_COMMENTS")
+    assert log_counts.get("SUCCESS")
+    assert not log_counts.get("ERROR")
 
 
 @pytest.mark.parametrize(
@@ -196,30 +174,24 @@ async def test_get_10_feeds_success_with_factory(
 )
 @pytest.mark.asyncio
 async def test_get_10_feeds_success_empty_response(
-    mock_logger: MagicMock,
+    captured_logs,
     mock_get_data_factory: Callable[[], tuple[Any, AsyncMock]],
     post_data: List[Dict[str, Any]],
     comment_data: List[Dict[str, Any]],
 ):
-    logger = mock_logger
     _patcher, _async_mock = mock_get_data_factory(post_data, comment_data)
     feeds = await get_10_feeds(start=0, limit=5)
     _patcher.stop()
 
-    logged_info_count = is_logged(logger, "Post_Cnt:", "info")
-    logged_info_filter_comments = is_logged(logger, "Filtered comments by post", "info")
-    logged_info_success = is_logged(logger, "Successfully created", "info")
-    logged_error = is_logged(
-        logger, "Error creating PostWithComments instances", "exception"
-    )
+    log_counts = count_log_events(captured_logs, "get_10_feeds")
 
     assert _async_mock.await_count == 2
     assert isinstance(feeds, List)
     assert len(feeds) == 0
-    assert logged_info_count
-    assert logged_info_filter_comments
-    assert logged_info_success
-    assert not logged_error
+    assert log_counts.get("FETCH_COUNTS")
+    assert log_counts.get("FILTERED_COMMENTS")
+    assert log_counts.get("SUCCESS")
+    assert not log_counts.get("ERROR")
 
 
 @pytest.mark.parametrize(
@@ -228,11 +200,10 @@ async def test_get_10_feeds_success_empty_response(
 )
 @pytest.mark.asyncio
 async def test_get_10_feeds_raises_service_exception(
-    mock_logger: MagicMock,
+    captured_logs,
     mock_get_data_factory: Callable[[], tuple[Any, AsyncMock]],
     mock_side_effect: BaseException,
 ):
-    logger = mock_logger
     _patcher, _async_mock = mock_get_data_factory(
         DEFAULT_POST_DATA, DEFAULT_COMMENT_DATA
     )
@@ -245,16 +216,10 @@ async def test_get_10_feeds_raises_service_exception(
             await get_10_feeds(start=0, limit=5)
         _patcher.stop()
 
-    logged_info_count = is_logged(logger, "Post_Cnt:", "info")
-    logged_info_filter_comments = is_logged(logger, "Filtered comments by post", "info")
-    logged_info_success = is_logged(logger, "Successfully created", "info")
-    logged_error = is_logged(
-        logger, "Error creating PostWithComments instances", "exception"
-    )
+    log_counts = count_log_events(captured_logs, "get_10_feeds")
 
     assert _async_mock.await_count == 2
-    assert logged_info_count
-    assert logged_info_filter_comments
-    assert not logged_info_success
-    assert logged_error
-    assert exc_info.value.service_method == "get_10_feeds"
+    assert log_counts.get("FETCH_COUNTS")
+    assert log_counts.get("FILTERED_COMMENTS")
+    assert not log_counts.get("SUCCESS")
+    assert log_counts.get("ERROR")

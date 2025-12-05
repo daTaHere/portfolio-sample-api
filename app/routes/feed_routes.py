@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
-from app import logger
+from app.logging import logger
 from app.services.feed_service import get_10_feeds
-from app.exceptions.base_exceptions import APIException, ServiceException
+from app.exceptions.base import APIException, ServiceException
 
 feed_bp = Blueprint("feeds", __name__)
 
