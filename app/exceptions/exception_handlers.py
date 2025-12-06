@@ -2,7 +2,7 @@ from app.logging import logger
 from typing import Any, Optional, Type
 
 
-def handle_error(
+def handle_service_error(
     exc: Exception,
     exc_message: str,
     log_message: str,
@@ -27,6 +27,27 @@ def handle_error(
         },
     )
     raise exc_type(exc_message, endpoint=url, method=method) from exc
+
+
+def handle_route_error(
+    exc: Exception,
+    log_message: str,
+    *route: str,
+    service_method: str,
+    **extra: Optional[Any],
+) -> None:
+
+    logger.error(
+        log_message,
+        extra={
+            "event_key": "ERROR",
+            "route": route,
+            "service_method": service_method,
+            "endpoint": getattr(exc, "endpoint", None),
+            "method": getattr(exc, "method", None),
+            **extra,
+        },
+    )
 
 
 def raise_error(

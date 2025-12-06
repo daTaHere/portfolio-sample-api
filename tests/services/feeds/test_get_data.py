@@ -159,7 +159,7 @@ async def test_get_data_response_count_mismatch_raises_service_exception(
     log_counts = count_log_events(captured_logs, "get_data")
 
     mock_send_request.assert_called_once_with(expected_url)
-    assert f"Internal Server Error Received:" in str(exc_info.value)
+    assert "Internal Server Error Received:" in str(exc_info.value)
     assert len(mock_send_request.return_value) > limit
     assert log_counts.get("ENDPOINT_URL")
     assert log_counts.get("REQUEST_ATTEMPT")

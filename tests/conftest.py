@@ -1,7 +1,39 @@
 import pytest
+from app import create_app, db
 from structlog.testing import capture_logs
 from unittest.mock import MagicMock, patch
-from typing import Generator
+from typing import Any, Generator
+from contextlib import contextmanager
+
+
+@pytest.fixture
+def app():
+    """Create and configure a test application instance."""
+    app = create_app("testing")
+
+    with app.app_context():
+        db.create_all()
+        yield app
+        db.session.remove()
+        db.drop_all()
+
+
+@pytest.fixture
+def client(app):
+    """Create a test client."""
+    return app.test_client()
+
+
+@pytest.fixture
+def request_context(app):
+    """Create a test client."""
+
+    @contextmanager
+    def mock_context(params: str = "") -> Generator[Any, None, None]:
+        with app.test_request_context(f"/api/feeds{params}"):
+            yield
+
+    return mock_context
 
 
 @pytest.fixture
