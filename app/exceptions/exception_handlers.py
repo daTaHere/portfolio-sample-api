@@ -37,6 +37,7 @@ def handle_route_error(
     service_method: str,
     **extra: Any,
 ) -> None:
+    """Helper function to log route-level exceptions consistently."""
 
     logger.error(
         log_message,
