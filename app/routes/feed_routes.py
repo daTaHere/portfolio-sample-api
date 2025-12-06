@@ -1,63 +1,71 @@
-from flask import Blueprint, jsonify, request
-from app.logging import logger
+from flask import Blueprint, request
+
 from app.services.feed_service import get_10_feeds
 from app.exceptions.base import APIException, ServiceException
+from app.exceptions.exception_handlers import handle_route_error
+from app.utils.route_utils import handle_route_response
+from app.utils.logger_helper import handle_log
 
 feed_bp = Blueprint("feeds", __name__)
 
 
 @feed_bp.route("/feeds", methods=["GET"])
 async def get_feeds():
-    start = request.args.get("start", default=0, type=int)
-    limit = request.args.get("limit", default=10, type=int)
-
-    logger.info(
-        "Incoming request",
-        extra={
-            "route": "/feeds",
-            "method": request.method,
-            "remote_ip": request.remote_addr,
-        },
+    handle_log(
+        "GET /feeds request received",
+        method="GET",
+        event_key="REQUEST_RECEIVED",
+        log_level="info",
+        service_method="get_feeds",
     )
+
     try:
-        res = await get_10_feeds(start=start, limit=limit)
-        logger.info(
-            "Route response success",
-            extra={
-                "route": "/feeds",
-                "status": 200,
-                "items": len(res),
-            },
-        )
-        return jsonify({"success": True, "data": res}), 200
+        if not request.args:
+            data = await get_10_feeds()
+        else:
+            start = int(request.args.get("start"))
+            limit = int(request.args.get("limit"))
+            data = await get_10_feeds(start=start, limit=limit)
+
     except APIException as e:
-        # 3rd-party HTTP failure → 502
-        logger.error(
+        handle_route_error(
+            e,
             "APIException occurred",
-            extra={
-                "route": "/feeds",
-                "endpoint": e.endpoint,
-                "method": e.method,
-            },
+            route="/feeds",
+            service_method="get_feeds",
         )
-        return jsonify({"success": False, "error": e.message}), 502
+        return handle_route_response(False, str(e), 502)
     except ServiceException as e:
-        logger.error(
+        handle_route_error(
+            e,
             "ServiceException occurred",
-            extra={
-                "route": "/feeds",
-                "endpoint": e.endpoint,
-                "method": e.method,
-            },
+            route="/feeds",
+            service_method="get_feeds",
         )
-        return jsonify({"success": False, "error": e.message}), 500
+        return handle_route_response(False, str(e), 500)
+    except (ValueError, TypeError) as e:
+        handle_route_error(
+            e,
+            "ValueError or TypeError occurred",
+            route="/feeds",
+            service_method="get_feeds",
+        )
+        return handle_route_response(False, str(e), 400)
     except Exception as e:
-        logger.error(
+        handle_route_error(
+            e,
             "Unexpected error occurred",
-            extra={
-                "route": "/feeds",
-                "endpoint": e.endpoint,
-                "method": e.method,
-            },
+            route="/feeds",
+            service_method="get_feeds",
         )
-        return jsonify({"success": False, "error": e.message}), 500
+        return handle_route_response(False, str(e), 500)
+
+    handle_log(
+        "GET /feeds request processed successfully",
+        method="GET",
+        event_key="SUCCESS",
+        log_level="info",
+        service_method="get_feeds",
+        items=len(data),
+    )
+    return handle_route_response(True, data, 200)

@@ -77,7 +77,7 @@ def test_create_model_list_success(
     assert len(result) == 2
     assert result[0].id == 2
     assert result[-1].id == 3
-    assert log_counts.get("CREATE_MODEL_LIST")
+    assert log_counts.get("CREATING_MODELS")
     assert log_counts.get("SUCCESS")
     assert not log_counts.get("ERROR")
 
@@ -91,7 +91,7 @@ def test_create_model_list_success_empty_response(captured_logs):
     assert isinstance(result, List)
     assert all(isinstance(item, Post) for item in result)
     assert len(result) == 0
-    assert log_counts.get("CREATE_MODEL_LIST")
+    assert log_counts.get("CREATING_MODELS")
     assert log_counts.get("SUCCESS")
     assert not log_counts.get("ERROR")
 
