@@ -1,10 +1,8 @@
-from flask import Blueprint, jsonify, request
-from typing import Any
+from flask import Blueprint, request
 
-from app.logging import logger
 from app.services.feed_service import get_10_feeds
 from app.exceptions.base import APIException, ServiceException
-from app.exceptions.exception_handlers import handle_route_error, raise_error
+from app.exceptions.exception_handlers import handle_route_error
 from app.utils.route_utils import handle_route_response
 from app.utils.logger_helper import handle_log
 
@@ -25,8 +23,8 @@ async def get_feeds():
         if not request.args:
             data = await get_10_feeds()
         else:
-            start = int(request.args.get("start", 0))
-            limit = int(request.args.get("limit", 10))
+            start = int(request.args.get("start"))
+            limit = int(request.args.get("limit"))
             data = await get_10_feeds(start=start, limit=limit)
 
     except APIException as e:
@@ -36,19 +34,11 @@ async def get_feeds():
             route="/feeds",
             service_method="get_feeds",
         )
-        return jsonify({"success": False, "error": str(e)}), 502
+        return handle_route_response(False, str(e), 502)
     except ServiceException as e:
         handle_route_error(
             e,
             "ServiceException occurred",
-            route="/feeds",
-            service_method="get_feeds",
-        )
-        return handle_route_response(False, str(e), 500)
-    except AttributeError as e:
-        handle_route_error(
-            e,
-            "AttributeError occurred",
             route="/feeds",
             service_method="get_feeds",
         )

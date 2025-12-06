@@ -12,7 +12,7 @@ def handle_service_error(
     method: Optional[str] = "",
     service_method: str = "",
     event_key: str = "ERROR",
-    **extra: Optional[Any],
+    **extra: Any,
 ) -> None:
     """Helper function to log and raise low-level exceptions consistently."""
     logger.error(
@@ -32,9 +32,10 @@ def handle_service_error(
 def handle_route_error(
     exc: Exception,
     log_message: str,
-    *route: str,
+    *,
+    route: str,
     service_method: str,
-    **extra: Optional[Any],
+    **extra: Any,
 ) -> None:
 
     logger.error(
@@ -59,7 +60,7 @@ def raise_error(
     method: Optional[str] = "",
     service_method: str = "",
     event_key: str = "ERROR",
-    **extra: Optional[Any],
+    **extra: Any,
 ) -> None:
     """Helper function to log and raise general exceptions consistently."""
     logger.error(

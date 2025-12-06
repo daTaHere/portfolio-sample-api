@@ -197,15 +197,14 @@ def create_model_list(input_data: List[Dict[str, Any]], model: Type[T]) -> List[
     Instantiate Post or Comment objects from raw data.
     """
     try:
-        items = [model(d) for d in input_data]
         handle_log(
-            "Created List of model instances",
-            event_key="CREATE_MODEL_LIST",
+            "Creating list of model instances",
+            event_key="CREATING_MODELS",
             log_level="info",
             service_method="create_model_list",
             model=model.__name__,
-            items=len(items),
         )
+        items = [model(d) for d in input_data]
 
     except (TypeError, ValueError) as e:
         handle_service_error(

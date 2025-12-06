@@ -1,6 +1,8 @@
 from app.logging import logger
 from typing import Any, Optional, Type
 
+allowed_log_levels = {"debug", "info", "warning", "error", "critical"}
+
 
 def handle_log(
     log_message: str,
@@ -9,8 +11,13 @@ def handle_log(
     log_level: str,
     event_key: str,
     service_method: str,
-    **extra: Optional[Any]
+    **extra: Any,
 ) -> None:
+    if log_level not in allowed_log_levels:
+        raise ValueError(
+            f"Invalid log_level '{log_level}'. Must be one of {allowed_log_levels}.",
+            service_method=service_method,
+        )
 
     log_method = getattr(logger, log_level)
 

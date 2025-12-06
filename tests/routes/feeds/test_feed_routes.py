@@ -1,5 +1,5 @@
 """
-Unit tests for user service and routes.
+Unit tests for feed routes.
 """
 
 import pytest
@@ -98,7 +98,7 @@ def test_get_feeds_success(
     assert test_args["start"] == 0
     assert test_args["limit"] == count
     assert status_code == 200
-    assert response_data["success"] == True
+    assert response_data["success"]
     assert isinstance(response_data["data"], list)
     assert response_data["data"] == test_data
     assert len(response_data["data"]) == count
@@ -125,7 +125,7 @@ def test_get_feeds_catch_api_exception(
     log_counts = count_log_events(captured_logs, "get_feeds")
 
     assert status_code == 502
-    assert response_data["success"] == False
+    assert not response_data["success"]
     assert "Connection error Unreachable" in response_data["error"]
     assert log_counts.get("REQUEST_RECEIVED")
     assert not log_counts.get("SUCCESS")
@@ -151,7 +151,7 @@ def test_get_feeds_catch_service_exception(
     log_counts = count_log_events(captured_logs, "get_feeds")
 
     assert status_code == 500
-    assert response_data["success"] == False
+    assert not response_data["success"]
     assert response_data["error"] == "Internal Server Error"
     assert log_counts.get("REQUEST_RECEIVED")
     assert not log_counts.get("SUCCESS")
@@ -181,7 +181,7 @@ def test_get_feeds_catch_type_and_value_error(
     mock_get_10_feeds.assert_not_called()
     assert log_counts.get("REQUEST_RECEIVED")
     assert status_code == 400
-    assert response_data["success"] == False
+    assert not response_data["success"]
     assert not log_counts.get("SUCCESS")
     assert "invalid literal for int()" in response_data["error"]
     assert log_counts.get("ERROR") == 1
@@ -202,7 +202,7 @@ def test_get_feeds_catch_generic_exception(
     log_counts = count_log_events(captured_logs, "get_feeds")
 
     assert status_code == 500
-    assert response_data["success"] == False
+    assert not response_data["success"]
     assert "Some unexpected error" in response_data["error"]
     assert log_counts.get("REQUEST_RECEIVED")
     assert not log_counts.get("SUCCESS")

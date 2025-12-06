@@ -26,7 +26,7 @@ def client(app):
 
 @pytest.fixture
 def request_context(app):
-    """Create a test client."""
+    """Create a request context manager."""
 
     @contextmanager
     def mock_context(params: str = "") -> Generator[Any, None, None]:
