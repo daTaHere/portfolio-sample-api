@@ -1,10 +1,12 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Any, Callable, Dict, List, Generator, Tuple
-
-from app.services.feed_service import get_10_feeds
-from app.exceptions.base import ServiceException
 from tests.utils import count_log_events
+
+from app.services.feeds.feed_service import get_10_feeds
+from app.exceptions.base import ServiceException
+from app.models.post_detail_model import PostWithComments
+
 
 DEFAULT_POST_DATA = [
     {
@@ -88,7 +90,7 @@ DEFAULT_COMMENT_COUNT_TABLE = {
 def mock_get_data() -> Generator[MagicMock, None, None]:
     async_mock = AsyncMock()
     async_mock.side_effect = [DEFAULT_POST_DATA, DEFAULT_COMMENT_DATA]
-    with patch("app.services.feed_service.get_data", async_mock):
+    with patch("app.services.feeds.feed_service.get_data", async_mock):
         yield async_mock
 
 
@@ -101,7 +103,7 @@ def mock_get_data_factory() -> Callable[[], tuple[Any, AsyncMock]]:
     ) -> Tuple[MagicMock, AsyncMock]:
         async_mock = AsyncMock()
         async_mock.side_effect = list(side_effect_data)
-        patcher = patch("app.services.feed_service.get_data", async_mock)
+        patcher = patch("app.services.feeds.feed_service.get_data", async_mock)
         patcher.start()
         return patcher, async_mock
 
@@ -121,13 +123,13 @@ async def test_get_10_feeds_success(
 
     assert _async_mock.await_count == 2
     assert isinstance(feeds, List)
-    assert all(isinstance(feed, Dict) for feed in feeds)
+    assert all(isinstance(feed, PostWithComments) for feed in feeds)
     assert len(feeds) == 5
     for feed in feeds:
-        feed_id = feed["id"]
-        assert "comments" in feed
-        assert len(feed["comments"]) == expected_comment_counts.get(feed_id, 0)
-        assert all(comment["postId"] == feed_id for comment in feed["comments"])
+        feed_id = feed.id
+        assert isinstance(feed.comments, List)
+        assert len(feed.comments) == expected_comment_counts.get(feed_id)
+        assert all(comment._postId == feed_id for comment in feed.comments)
     assert log_counts.get("FETCH_COUNTS")
     assert log_counts.get("FILTERED_COMMENTS")
     assert log_counts.get("SUCCESS")
@@ -152,13 +154,13 @@ async def test_get_10_feeds_success_with_factory(
 
     assert _async_mock.await_count == 2
     assert isinstance(feeds, List)
-    assert all(isinstance(feed, Dict) for feed in feeds)
+    assert all(isinstance(feed, PostWithComments) for feed in feeds)
     assert len(feeds) == 5
     for feed in feeds:
-        feed_id = feed["id"]
-        assert "comments" in feed
-        assert len(feed["comments"]) == expected_comment_counts.get(feed_id, 0)
-        assert all(comment["postId"] == feed_id for comment in feed["comments"])
+        feed_id = feed.id
+        assert isinstance(feed.comments, List)
+        assert len(feed.comments) == expected_comment_counts.get(feed_id)
+        assert all(comment._postId == feed_id for comment in feed.comments)
     assert log_counts.get("FETCH_COUNTS")
     assert log_counts.get("FILTERED_COMMENTS")
     assert log_counts.get("SUCCESS")
@@ -209,7 +211,7 @@ async def test_get_10_feeds_raises_service_exception(
     )
 
     with patch(
-        "app.services.feed_service.PostWithComments",
+        "app.services.feeds.feed_service.PostWithComments",
         side_effect=mock_side_effect,
     ):
         with pytest.raises(ServiceException) as exc_info:

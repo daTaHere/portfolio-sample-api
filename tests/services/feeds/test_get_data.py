@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 from typing import Any, Dict, Generator, List
 from tests.utils import count_log_events
 
-from app.services.feed_service import get_data
+from app.services.feeds.feed_validators import get_data
 from app.exceptions.base import ServiceException
 
 DEFAULT_BASE_URL = "https://jsonplaceholder.typicode.com"
@@ -15,7 +15,7 @@ DEFAULT_LIMIT = 2
 
 @pytest.fixture
 def mock_send_request() -> Generator[MagicMock, None, None]:
-    with patch("app.services.feed_service.send_request") as mock_send:
+    with patch("app.services.feeds.feed_validators.send_request") as mock_send:
         yield mock_send
 
 
