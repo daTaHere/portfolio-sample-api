@@ -1,6 +1,6 @@
 """
 Feed service layer.
-Business logic for user operations.
+Business logic for feed operations.
 """
 
 import asyncio
@@ -26,7 +26,7 @@ COMMENT_ENDPOINT = "comments"
 T = TypeVar("T", bound=Post | Comment)
 
 
-async def get_10_feeds(start: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
+async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments]:
     """
     Orchestrates fetching posts and comments, builds feed objects.
     """

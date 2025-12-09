@@ -1,6 +1,6 @@
-from marshmallow import Schema, fields
-
 """Schemas for serializing and deserializing feed-related data."""
+
+from marshmallow import Schema, fields
 
 
 class CommentSchema(Schema):

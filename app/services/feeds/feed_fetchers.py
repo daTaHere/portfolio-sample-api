@@ -1,3 +1,5 @@
+"""Functions related to fetching feed data from external APIs."""
+
 import httpx
 import asyncio
 
@@ -8,7 +10,7 @@ from app.exceptions.base import (
     ServiceException,
 )
 
-from app.exceptions.exception_handlers import handle_service_error, raise_error
+from app.exceptions.exception_handlers import handle_service_error
 from app.utils.logger_helper import handle_log
 from app.schemas import PostSchema, CommentSchema
 
@@ -19,6 +21,8 @@ POST_ENDPOINT = "posts"
 MAX_RETRIES = 3
 HTTP_TIMEOUT_SECONDS = 5.0
 RETRY_BACKOFF_BASE = 0.2  # seconds
+POST_SCHEMA = PostSchema(many=True)
+COMMENT_SCHEMA = CommentSchema(many=True)
 
 
 async def send_request(endpoint: str) -> List[Dict[str, Any]]:
@@ -27,9 +31,7 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
     Handles network, HTTP status, and JSON decoding errors.
     """
     url = endpoint
-    validated_data = (
-        PostSchema(many=True) if POST_ENDPOINT in endpoint else CommentSchema(many=True)
-    )
+    validator = POST_SCHEMA if POST_ENDPOINT in endpoint else COMMENT_SCHEMA
     data = None
 
     for attempt in range(1, MAX_RETRIES + 1):
@@ -55,8 +57,9 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
                         service_method="send_request",
                         endpoint=url,
                     )
-                    # data = res.json()
-                    clean_data = validated_data.load(res.json())
+
+                    # Validate and deserialize response data
+                    data = validator.load(res.json())
                     break  # exit retry loop on success
                 except httpx.DecodingError as e:
                     handle_service_error(
@@ -128,7 +131,7 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
         log_level="info",
         service_method="send_request",
         endpoint=url,
-        items=len(clean_data),
+        items=len(data),
     )
 
-    return clean_data
+    return data

@@ -85,7 +85,7 @@ async def test_send_request_unexpected_json_type_raises_service_exception(
 async def test_send_request_null_response_raises_service_exception(captured_logs):
     url = BASE_URL
     # mock a 200 response with null JSON
-    respx.get(url).mock(return_value=httpx.Response(200, content=None))
+    respx.get(url).mock(return_value=httpx.Response(200, json=None))
 
     with pytest.raises(ServiceException):
         await send_request(url)

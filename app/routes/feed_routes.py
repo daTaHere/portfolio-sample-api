@@ -23,11 +23,9 @@ async def get_feeds():
     )
 
     try:
-
         if not request.args:
             res = await get_10_feeds()
         else:
-
             start = int(request.args.get("start"))
             limit = int(request.args.get("limit"))
             res = await get_10_feeds(start=start, limit=limit)
@@ -63,7 +61,7 @@ async def get_feeds():
             route="/feeds",
             service_method="get_feeds",
         )
-        return handle_route_response(False, str(e), 501)
+        return handle_route_response(False, str(e), 500)
 
     handle_log(
         "GET /feeds request processed successfully",

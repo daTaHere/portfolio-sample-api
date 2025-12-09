@@ -1,8 +1,8 @@
+"""Functions related to building feed models from raw data."""
+
 from typing import Any, Dict, List, Type, TypeVar
 
 from app.exceptions.base import ServiceException
-
-
 from app.exceptions.exception_handlers import handle_service_error
 from app.utils.logger_helper import handle_log
 
