@@ -6,7 +6,7 @@ Business logic for feed operations.
 import asyncio
 
 from collections import defaultdict
-from typing import Dict, List, TypeVar
+from typing import Dict, List
 
 from app.logging import logger
 from app.models import Post, Comment, PostWithComments
@@ -22,9 +22,6 @@ from app.utils.logger_helper import handle_log
 
 POST_ENDPOINT = "posts"
 COMMENT_ENDPOINT = "comments"
-
-
-T = TypeVar("T", bound=Post | Comment)
 
 
 async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments]:
