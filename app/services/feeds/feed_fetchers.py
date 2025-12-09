@@ -17,7 +17,7 @@ from app.schemas import PostSchema, CommentSchema
 from marshmallow import ValidationError
 
 
-POST_ENDPOINT = "posts"
+POST_ENDPOINT = "https://jsonplaceholder.typicode.com/posts"
 MAX_RETRIES = 3
 HTTP_TIMEOUT_SECONDS = 5.0
 RETRY_BACKOFF_BASE = 0.2  # seconds

@@ -35,7 +35,7 @@ async def get_feeds():
             e,
             "APIException occurred",
             route="/feeds",
-            service_method=e.service_method,
+            service_method="get_feeds",
         )
         return handle_route_response(False, str(e), 502)
     except ServiceException as e:
@@ -43,7 +43,7 @@ async def get_feeds():
             e,
             "ServiceException occurred",
             route="/feeds",
-            service_method=e.service_method,
+            service_method="get_feeds",
         )
         return handle_route_response(False, str(e), 500)
     except (ValueError, TypeError) as e:

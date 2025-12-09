@@ -6,16 +6,17 @@ Business logic for feed operations.
 import asyncio
 
 from collections import defaultdict
-from typing import Any, Dict, List, TypeVar
+from typing import Dict, List, TypeVar
 
 from app.logging import logger
 from app.models import Post, Comment, PostWithComments
+
 from app.exceptions.base import ServiceException
+from app.exceptions.exception_handlers import handle_service_error
 
 from app.services.feeds.feed_validators import get_data
 from app.services.feeds.feed_builders import create_model_list
 
-from app.exceptions.exception_handlers import handle_service_error
 from app.utils.logger_helper import handle_log
 
 
@@ -60,7 +61,9 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
         },
     )
     try:
-        feeds = [PostWithComments(post, comments_by_post[post._id]) for post in posts]
+        feeds = [
+            PostWithComments(post, comments_by_post.get(post._id, [])) for post in posts
+        ]
 
     except (TypeError, ValueError) as e:
         handle_service_error(

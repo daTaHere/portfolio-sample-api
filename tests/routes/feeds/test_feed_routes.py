@@ -29,11 +29,18 @@ def mock_get_10_feeds():
         (
             [
                 {
-                    "comments": [],
-                    "content": "et iusto sed quo iure\nvoluptatem occaecati omnis eligendi aut ad\nvoluptatem doloribus vel accusantium quis pariatur\nmolestiae porro eius odio et labore et velit aut",
-                    "id": 3,
-                    "title": "ea molestias quasi exercitationem repellat qui ipsa sit aut",
-                },
+                    "body": "quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto",
+                    "comments": [
+                        {
+                            "body": "laudantium enim quasi est quidem magnam voluptate ipsam eos\ntempora quo necessitatibus\ndolor quam autem quasi\nreiciendis et nam sapiente accusantium",
+                            "email": "Eliseo@gardner.biz",
+                            "id": 1,
+                            "name": "id labore ex et quam laborum",
+                        }
+                    ],
+                    "id": 1,
+                    "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+                }
             ],
             "?start=0&limit=1",
             1,
@@ -41,34 +48,65 @@ def mock_get_10_feeds():
         (
             [
                 {
-                    "userId": 1,
+                    "body": "quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto",
+                    "comments": [
+                        {
+                            "body": "laudantium enim quasi est quidem magnam voluptate ipsam eos\ntempora quo necessitatibus\ndolor quam autem quasi\nreiciendis et nam sapiente accusantium",
+                            "email": "Eliseo@gardner.biz",
+                            "id": 1,
+                            "name": "id labore ex et quam laborum",
+                        },
+                        {
+                            "body": "est natus enim nihil est dolore omnis voluptatem numquam\net omnis occaecati quod ullam at\nvoluptatem error expedita pariatur\nnihil sint nostrum voluptatem reiciendis et",
+                            "email": "Jayne_Kuhic@sydney.com",
+                            "id": 2,
+                            "name": "quo vero reiciendis velit similique earum",
+                        },
+                        {
+                            "body": "quia molestiae reprehenderit quasi aspernatur\naut expedita occaecati aliquam eveniet laudantium\nomnis quibusdam delectus saepe quia accusamus maiores nam est\ncum et ducimus et vero voluptates excepturi deleniti ratione",
+                            "email": "Nikita@garfield.biz",
+                            "id": 3,
+                            "name": "odio adipisci rerum aut animi",
+                        },
+                        {
+                            "body": "non et atque\noccaecati deserunt quas accusantium unde odit nobis qui voluptatem\nquia voluptas consequuntur itaque dolor\net qui rerum deleniti ut occaecati",
+                            "email": "Lew@alysha.tv",
+                            "id": 4,
+                            "name": "alias odio sit",
+                        },
+                        {
+                            "body": "harum non quasi et ratione\ntempore iure ex voluptates in ratione\nharum architecto fugit inventore cupiditate\nvoluptates magni quo et",
+                            "email": "Hayden@althea.biz",
+                            "id": 5,
+                            "name": "vero eaque aliquid doloribus et culpa",
+                        },
+                    ],
                     "id": 1,
                     "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
-                    "body": "quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto",
                 },
                 {
-                    "userId": 1,
+                    "body": "est rerum tempore vitae\nsequi sint nihil reprehenderit dolor beatae ea dolores neque\nfugiat blanditiis voluptate porro vel nihil molestiae ut reiciendis\nqui aperiam non debitis possimus qui neque nisi nulla",
+                    "comments": [],
                     "id": 2,
                     "title": "qui est esse",
-                    "body": "est rerum tempore vitae\nsequi sint nihil reprehenderit dolor beatae ea dolores neque\nfugiat blanditiis voluptate porro vel nihil molestiae ut reiciendis\nqui aperiam non debitis possimus qui neque nisi nulla",
                 },
                 {
-                    "userId": 1,
+                    "body": "et iusto sed quo iure\nvoluptatem occaecati omnis eligendi aut ad\nvoluptatem doloribus vel accusantium quis pariatur\nmolestiae porro eius odio et labore et velit aut",
+                    "comments": [],
                     "id": 3,
                     "title": "ea molestias quasi exercitationem repellat qui ipsa sit aut",
-                    "body": "et iusto sed quo iure\nvoluptatem occaecati omnis eligendi aut ad\nvoluptatem doloribus vel accusantium quis pariatur\nmolestiae porro eius odio et labore et velit aut",
                 },
                 {
-                    "userId": 1,
+                    "body": "ullam et saepe reiciendis voluptatem adipisci\nsit amet autem assumenda provident rerum culpa\nquis hic commodi nesciunt rem tenetur doloremque ipsam iure\nquis sunt voluptatem rerum illo velit",
+                    "comments": [],
                     "id": 4,
                     "title": "eum et est occaecati",
-                    "body": "ullam et saepe reiciendis voluptatem adipisci\nsit amet autem assumenda provident rerum culpa\nquis hic commodi nesciunt rem tenetur doloremque ipsam iure\nquis sunt voluptatem rerum illo velit",
                 },
                 {
-                    "userId": 1,
+                    "body": "repudiandae veniam quaerat sunt sed\nalias aut fugiat sit autem sed est\nvoluptatem omnis possimus esse voluptatibus quis\nest aut tenetur dolor neque",
+                    "comments": [],
                     "id": 5,
                     "title": "nesciunt quas odio",
-                    "body": "repudiandae veniam quaerat sunt sed\nalias aut fugiat sit autem sed est\nvoluptatem omnis possimus esse voluptatibus quis\nest aut tenetur dolor neque",
                 },
             ],
             "?start=0&limit=5",
@@ -165,8 +203,6 @@ def test_get_feeds_catch_service_exception(
         "?start=a&limit=10",
         "?start=1.5&limit=10",
         "?start=0&limit=1.5",
-        # "?start=-1&limit=10",
-        # "?start=0&limit=-10",
     ],
 )
 def test_get_feeds_catch_type_and_value_error(

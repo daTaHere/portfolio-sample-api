@@ -7,7 +7,7 @@ class CommentSchema(Schema):
     id = fields.Int(required=True)
     postId = fields.Int(required=True)
     name = fields.Str(required=True)
-    email = fields.Str(required=True)
+    email = fields.Email(required=True)
     body = fields.Str(required=True)
 
 
