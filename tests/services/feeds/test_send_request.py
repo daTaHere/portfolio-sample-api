@@ -1,11 +1,11 @@
 import pytest
 import respx
 import httpx
-from unittest.mock import patch
 
+from unittest.mock import patch
 from typing import Any
 
-from app.services.feed_service import send_request
+from app.services.feeds.feed_fetchers import send_request
 from app.exceptions.base import APIException, ServiceException
 from tests.utils import count_log_events
 
@@ -18,7 +18,15 @@ BASE_URL = "https://jsonplaceholder.typicode.com/posts"
 async def test_send_request_success(captured_logs):
     url = f"{BASE_URL}?_start=0&_limit=2"
     # mock a 200 JSON list response
-    respx.get(url).mock(return_value=httpx.Response(200, json=[{"id": 1}, {"id": 2}]))
+    respx.get(url).mock(
+        return_value=httpx.Response(
+            200,
+            json=[
+                {"id": 1, "userId": 10, "title": "test", "body": "lorem"},
+                {"id": 2, "userId": 20, "title": "test2", "body": "ipsum"},
+            ],
+        )
+    )
     data = await send_request(url)
 
     log_counts = count_log_events(captured_logs, "send_request")
@@ -61,7 +69,7 @@ async def test_send_request_unexpected_json_type_raises_service_exception(
     url = BASE_URL
     # mock a 200 response with bad JSON type
     respx.get(url).mock(return_value=httpx.Response(200, json=bad_test_data))
-    with pytest.raises(ServiceException):
+    with pytest.raises(APIException):
         await send_request(url)
 
     log_counts = count_log_events(captured_logs, "send_request")
@@ -77,7 +85,7 @@ async def test_send_request_unexpected_json_type_raises_service_exception(
 async def test_send_request_null_response_raises_service_exception(captured_logs):
     url = BASE_URL
     # mock a 200 response with null JSON
-    respx.get(url).mock(return_value=httpx.Response(200, content=b"null"))
+    respx.get(url).mock(return_value=httpx.Response(200, content=None))
 
     with pytest.raises(ServiceException):
         await send_request(url)
@@ -178,7 +186,13 @@ async def test_send_request_retry_connection_timeout_raises_api_exception(
         [
             httpx.ConnectTimeout("connection timeout"),
             httpx.ConnectTimeout("connection timeout"),
-            httpx.Response(200, json=[{"id": 1}, {"id": 2}]),
+            httpx.Response(
+                200,
+                json=[
+                    {"id": 1, "userId": 10, "title": "test", "body": "lorem"},
+                    {"id": 2, "userId": 20, "title": "test2", "body": "ipsum"},
+                ],
+            ),
         ]
     ],
 )

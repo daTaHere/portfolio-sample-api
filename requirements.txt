@@ -26,6 +26,7 @@ itsdangerous==2.2.0
 Jinja2==3.1.6
 kombu==5.5.4
 MarkupSafe==3.0.3
+marshmallow==4.1.1
 mccabe==0.7.0
 mypy_extensions==1.1.0
 packaging==25.0

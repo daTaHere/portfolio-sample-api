@@ -1,10 +1,13 @@
 from flask import Blueprint, request
 
-from app.services.feed_service import get_10_feeds
+from app.services.feeds.feed_service import get_10_feeds
+from app.schemas.feed_schemas import PostWithCommentsSchema
+
 from app.exceptions.base import APIException, ServiceException
 from app.exceptions.exception_handlers import handle_route_error
 from app.utils.route_utils import handle_route_response
 from app.utils.logger_helper import handle_log
+
 
 feed_bp = Blueprint("feeds", __name__)
 
@@ -20,19 +23,21 @@ async def get_feeds():
     )
 
     try:
+
         if not request.args:
-            data = await get_10_feeds()
+            res = await get_10_feeds()
         else:
+
             start = int(request.args.get("start"))
             limit = int(request.args.get("limit"))
-            data = await get_10_feeds(start=start, limit=limit)
-
+            res = await get_10_feeds(start=start, limit=limit)
+        data = PostWithCommentsSchema(many=True).dump(res)
     except APIException as e:
         handle_route_error(
             e,
             "APIException occurred",
             route="/feeds",
-            service_method="get_feeds",
+            service_method=e.service_method,
         )
         return handle_route_response(False, str(e), 502)
     except ServiceException as e:
@@ -40,7 +45,7 @@ async def get_feeds():
             e,
             "ServiceException occurred",
             route="/feeds",
-            service_method="get_feeds",
+            service_method=e.service_method,
         )
         return handle_route_response(False, str(e), 500)
     except (ValueError, TypeError) as e:
@@ -58,7 +63,7 @@ async def get_feeds():
             route="/feeds",
             service_method="get_feeds",
         )
-        return handle_route_response(False, str(e), 500)
+        return handle_route_response(False, str(e), 501)
 
     handle_log(
         "GET /feeds request processed successfully",

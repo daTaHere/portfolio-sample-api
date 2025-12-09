@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import List
 
 
 class Post:
@@ -22,9 +22,6 @@ class Post:
     def id(self) -> int:
         return self._id
 
-    def to_dict(self) -> dict:
-        return {"id": self._id, "title": self.title, "content": self.body}
-
 
 class Comment:
     __slots__ = ("_id", "_postId", "name", "email", "body")
@@ -44,26 +41,12 @@ class Comment:
     def post_id(self):
         return self._postId
 
-    def to_dict(self) -> dict:
-        return {
-            "id": self._id,
-            "postId": self._postId,
-            "name": self.name,
-            "email": self.email,
-            "comment": self.body,
-        }
-
 
 class PostWithComments(Post):
     __slots__ = ("comments",)
 
-    def __init__(self, posts: Post, comments: Dict[int, List[Comment]]):
+    def __init__(self, posts: Post, comments: List[Comment]):
         self._id = posts.id
         self.title = posts.title
         self.body = posts.body
-        self.comments: Dict[int, List[Comment]] = comments
-
-    def to_dict(self) -> dict:
-        post_dict = super().to_dict()
-        post_dict["comments"] = [c.to_dict() for c in self.comments]
-        return post_dict
+        self.comments = comments
