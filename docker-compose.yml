@@ -1,0 +1,43 @@
+name: portfolio-sample-api
+
+services:
+  flask-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: portfolio-api-sample:1.0
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/api
+    environment:
+      FLASK_ENV: development
+      FLASK_DEBUG: "1"
+    networks:
+      - portfolio-api-net
+
+  redis:
+    image: redis:8
+    # Mapping port for development debugging purposes only
+    # Remove port mapping in production for better security
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - portfolio-api-net
+    # Restart and healthcheck for future implementation
+    # restart: unless-stopped
+    # healthcheck:
+    #   test: ["CMD", "redis-cli", "ping"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
+    #   start_period: 5s
+
+networks:
+  portfolio-api-net:
+    driver: bridge
+
+volumes:
+  redis-data:
