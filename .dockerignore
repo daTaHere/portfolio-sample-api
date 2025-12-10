@@ -20,5 +20,5 @@ instance/*
 
 # Ignore editor/project files
 *.swp
-*.vscode/
-*.idea/
+.vscode/
+.idea/
