@@ -7,6 +7,7 @@ from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from app.logging import logger
+from app.clients.redis_client import init_redis
 import logging
 import os
 
@@ -36,6 +37,7 @@ def create_app(config_name=None):
 
     # Initialize extensions
     db.init_app(app)
+    init_redis(app)
     CORS(app)
 
     logging.basicConfig(level=logging.INFO)
