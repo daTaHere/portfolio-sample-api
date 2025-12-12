@@ -78,13 +78,12 @@ async def get_feeds():
 
 @feed_bp.route("/cache-test", methods=["GET"])
 def test_cache():
-
     key = "test:key"
     test_value = {"foo": "bar"}
 
     # Try retrieving existing
     cached = cache_get(key)
-    print("Cached value:", cached)
+
     if cached:
         return handle_route_response(True, cached, 200)
 
