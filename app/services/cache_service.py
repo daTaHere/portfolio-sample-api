@@ -1,3 +1,5 @@
+"""Cache management functions using Redis."""
+
 import json
 from typing import Dict
 from redis.exceptions import ConnectionError, TimeoutError, DataError
@@ -9,6 +11,9 @@ from app.utils.logger_helper import handle_log
 
 
 def cache_set(key: str, value: dict, ttl: int = 60) -> None:
+    """
+    Set a cache value in Redis with a specified TTL (time-to-live) in seconds.
+    """
     handle_log(
         f"Setting cache for key: {key}",
         method="POST",
@@ -58,6 +63,9 @@ def cache_set(key: str, value: dict, ttl: int = 60) -> None:
 
 
 def cache_get(key: str) -> Dict | None:
+    """
+    Retrieve a cache value from Redis by key.
+    """
     handle_log(
         f"Retrieving cache for key: {key}",
         method="GET",
@@ -66,17 +74,19 @@ def cache_get(key: str) -> Dict | None:
         service_method="cache_get",
         key=key,
     )
+    data = None
     try:
         is_cached = redis_client.get(key)
-        data = json.loads(is_cached) if is_cached else None
-        handle_log(
-            f"Cache retrieved successfully for key: {key}",
-            method="GET",
-            event_key="SUCCESS",
-            log_level="info",
-            service_method="cache_get",
-            key=key,
-        )
+        if is_cached:
+            data = json.loads(is_cached)
+            handle_log(
+                f"Cache retrieved successfully for key: {key}",
+                method="GET",
+                event_key="SUCCESS",
+                log_level="info",
+                service_method="cache_get",
+                key=key,
+            )
     except DataError as e:
         handle_service_error(
             exc=e,
@@ -108,6 +118,10 @@ def cache_get(key: str) -> Dict | None:
 
 
 def cache_delete(key: str) -> int:
+    """
+    Delete a cache value from Redis by key.
+
+    """
     handle_log(
         "Attempting to delete cache",
         method="DELETE",
@@ -151,7 +165,7 @@ def cache_delete(key: str) -> int:
     except (ConnectionError, TimeoutError) as e:
         handle_service_error(
             exc=e,
-            exc_message="Service Unreachable: ConnectionError or TimeoutError",
+            exc_message="Cache service is unreachable: ConnectionError or TimeoutError",
             log_message="Connection error in cache_delete",
             exc_type=APIException,
             service_method="cache_delete",

@@ -21,4 +21,3 @@ def init_redis(app):
             event_key="ERROR",
             service_name="init_redis",
         )
-        redis_client = None
