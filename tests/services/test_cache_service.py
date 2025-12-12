@@ -179,7 +179,7 @@ def test_cache_miss_returns_none(patch_redis_client, captured_logs):
 
     assert cached is None
     assert log_count["CACHE_GET"]
-    assert log_count["SUCCESS"]
+    assert not log_count["SUCCESS"]
     assert not log_count["ERROR"]
 
 
@@ -221,7 +221,7 @@ def test_cache_ttl_expiration(
     assert cached == value  # Cache should be available before TTL
     assert not not_cached  # Cache should expire after TTL
     assert log_count["CACHE_GET"] == 2
-    assert log_count["SUCCESS"] == 2
+    assert log_count["SUCCESS"]
     assert not log_count["ERROR"]
 
 

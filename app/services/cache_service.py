@@ -22,7 +22,6 @@ def cache_set(key: str, value: dict, ttl: int = 60) -> None:
         service_method="cache_set",
         key=key,
     )
-
     try:
         redis_client.set(key, json.dumps(value), ex=ttl)
         handle_log(
