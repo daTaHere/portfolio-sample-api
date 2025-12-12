@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request
 
 
 from app.services.feeds.feed_service import get_10_feeds
@@ -9,7 +9,7 @@ from app.exceptions.exception_handlers import handle_route_error
 from app.utils.route_utils import handle_route_response
 from app.utils.logger_helper import handle_log
 
-from app.services.cache_service import cache_delete, cache_get, cache_set
+from app.services.cache_service import cache_get, cache_set
 
 feed_bp = Blueprint("feeds", __name__)
 

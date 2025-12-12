@@ -49,7 +49,7 @@ def cache_set(key: str, value: dict, ttl: int = 60) -> None:
     except (ConnectionError, TimeoutError) as e:
         handle_service_error(
             exc=e,
-            exc_message="Cache service is unrecachable",
+            exc_message="Cache service is unreachable",
             log_message="Connection error in cache_set",
             exc_type=APIException,
             service_method="cache_set",
@@ -98,7 +98,7 @@ def cache_get(key: str) -> Dict | None:
     except (ConnectionError, TimeoutError) as e:
         handle_service_error(
             exc=e,
-            exc_message="Cache service is unrecachable",
+            exc_message="Cache service is unreachable",
             log_message="Connection error in cache_get",
             exc_type=APIException,
             service_method="cache_get",

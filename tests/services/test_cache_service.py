@@ -166,7 +166,7 @@ def test_cache_get_connection_and_timeout_error_raises_api_exception(
 
     log_count = count_log_events(captured_logs, "cache_get")
 
-    assert "Cache service is unrecachable" in str(exc_info.value)
+    assert "Cache service is unreachable" in str(exc_info.value)
     assert log_count["CACHE_GET"]
     assert not log_count["SUCCESS"]
     assert log_count["ERROR"]
