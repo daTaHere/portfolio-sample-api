@@ -1,6 +1,5 @@
 from flask import Blueprint, request
 
-
 from app.services.feeds.feed_service import get_10_feeds
 from app.schemas.feed_schemas import PostWithCommentsSchema
 

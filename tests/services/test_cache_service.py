@@ -108,7 +108,7 @@ def test_cache_set_connection_and_timeout_error_raises_api_exception(
 
     log_count = count_log_events(captured_logs, "cache_set")
 
-    assert "Cache service is unrecachable" in str(exc_info.value)
+    assert "Cache service is unreachable" in str(exc_info.value)
     assert log_count["CACHE_SET"]
     assert not log_count["SUCCESS"]
     assert log_count["ERROR"]
@@ -210,7 +210,7 @@ def test_cache_ttl_expiration(
 ):
     key = DEFAULT_KEY
     value = {"expire": True}
-    cache_service.cache_set(key, value, ttl=cache_age)  # 1 second TTL
+    cache_service.cache_set(key, value, ttl=cache_age)  # TTL set to cache_age
     cached = cache_service.cache_get(key)
 
     time.sleep(delay_time)
@@ -286,10 +286,8 @@ def test_cache_delete_connection_and_timeout_error_raises_api_exception(
 def test_cache_delete_data_error_raises_service_exception(
     patch_redis_client, captured_logs, invalid_key: Any
 ):
-    key = invalid_key
-
     with pytest.raises(cache_service.ServiceException) as exc_info:
-        cache_service.cache_delete(key)
+        cache_service.cache_delete(invalid_key)
 
     log_count = count_log_events(captured_logs, "cache_delete")
 
