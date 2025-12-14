@@ -5,7 +5,7 @@ from marshmallow import Schema, fields
 
 class CommentSchema(Schema):
     id = fields.Int(required=True)
-    postId = fields.Int(required=True)
+    post_id = fields.Int(required=True, data_key="postId")
     name = fields.Str(required=True)
     email = fields.Email(required=True)
     body = fields.Str(required=True)

@@ -11,6 +11,7 @@ DEFAULT_BASE_URL = "https://jsonplaceholder.typicode.com"
 DEFAULT_ENDPOINT = "posts"
 DEFAULT_START = 0
 DEFAULT_LIMIT = 2
+DEFAULT_PREFECH_LIMIT = 2
 
 
 @pytest.fixture
@@ -44,7 +45,7 @@ async def test_get_data_success(
     test_data: List[Dict[str, Any]],
 ):
     endpoint = DEFAULT_ENDPOINT
-    expected_url = f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit}"
+    expected_url = f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit * DEFAULT_PREFECH_LIMIT}"
 
     mock_send_request.return_value = test_data
     res = await get_data(endpoint, start, limit)
@@ -72,7 +73,7 @@ async def test_get_data_response_empty_success(
     start = DEFAULT_START
     limit = 0
     fake_data = []
-    expected_url = f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit}"
+    expected_url = f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit * DEFAULT_PREFECH_LIMIT}"
 
     mock_send_request.return_value = fake_data
     res = await get_data(endpoint, start, limit)
@@ -108,7 +109,7 @@ async def test_get_data_response_items_within_limit_success(
     endpoint = DEFAULT_ENDPOINT
     start = DEFAULT_START
     limit = 10
-    expected_url = f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit}"
+    expected_url = f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit * DEFAULT_PREFECH_LIMIT}"
 
     mock_send_request.return_value = test_data
     res = await get_data(endpoint, start, limit)
@@ -134,10 +135,10 @@ async def test_get_data_response_items_within_limit_success(
     [
         (
             DEFAULT_LIMIT,
-            [{"id": num} for num in range(1, 4)],
+            [{"id": num} for num in range(1, 6)],
         ),
-        (5, [{"id": num} for num in range(1, 7)]),
-        (10, [{"id": num} for num in range(1, 12)]),
+        (5, [{"id": num} for num in range(1, 12)]),
+        (10, [{"id": num} for num in range(1, 22)]),
     ],
 )
 @pytest.mark.asyncio
@@ -150,7 +151,7 @@ async def test_get_data_response_count_mismatch_raises_service_exception(
     endpoint = DEFAULT_ENDPOINT
     start = DEFAULT_START
     limit = test_limit
-    expected_url = f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit}"
+    expected_url = f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit * DEFAULT_PREFECH_LIMIT}"
 
     mock_send_request.return_value = test_data
     with pytest.raises(ServiceException) as exc_info:

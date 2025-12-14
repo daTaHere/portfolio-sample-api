@@ -28,7 +28,7 @@ class Comment:
 
     def __init__(self, comment_data: dict):
         self._id: int = comment_data.get("id")
-        self._postId: int = comment_data.get("postId", "")
+        self._postId: int = comment_data.get("post_id", "")
         self.name: str = comment_data.get("name", "")
         self.email: str = comment_data.get("email", "")
         self.body: str = comment_data.get("body", "")

@@ -7,6 +7,7 @@ from app.services.feeds.feed_service import get_10_feeds
 from app.exceptions.base import ServiceException
 from app.models.post_detail_model import PostWithComments
 
+from app.schemas.feed_schemas import PostWithCommentsSchema
 
 DEFAULT_POST_DATA = [
     {
@@ -42,35 +43,35 @@ DEFAULT_POST_DATA = [
 ]
 DEFAULT_COMMENT_DATA = [
     {
-        "postId": 1,
+        "post_id": 1,
         "id": 1,
         "name": "id labore ex et quam laborum",
         "email": "Eliseo@gardner.biz",
         "body": "laudantium enim quasi est quidem magnam voluptate ipsam eos\ntempora quo necessitatibus\ndolor quam autem quasi\nreiciendis et nam sapiente accusantium",
     },
     {
-        "postId": 1,
+        "post_id": 1,
         "id": 2,
         "name": "quo vero reiciendis velit similique earum",
         "email": "Jayne_Kuhic@sydney.com",
         "body": "est natus enim nihil est dolore omnis voluptatem numquam\net omnis occaecati quod ullam at\nvoluptatem error expedita pariatur\nnihil sint nostrum voluptatem reiciendis et",
     },
     {
-        "postId": 2,
+        "post_id": 2,
         "id": 3,
         "name": "odio adipisci rerum aut animi",
         "email": "Nikita@garfield.biz",
         "body": "quia molestiae reprehenderit quasi aspernatur\naut expedita occaecati aliquam eveniet laudantium\nomnis quibusdam delectus saepe quia accusamus maiores nam est\ncum et ducimus et vero voluptates excepturi deleniti ratione",
     },
     {
-        "postId": 1,
+        "post_id": 1,
         "id": 4,
         "name": "alias odio sit",
         "email": "Lew@alysha.tv",
         "body": "non et atque\noccaecati deserunt quas accusantium unde odit nobis qui voluptatem\nquia voluptas consequuntur itaque dolor\net qui rerum deleniti ut occaecati",
     },
     {
-        "postId": 5,
+        "post_id": 5,
         "id": 5,
         "name": "vero eaque aliquid doloribus et culpa",
         "email": "Hayden@althea.biz",
@@ -110,13 +111,25 @@ def mock_get_data_factory() -> Callable[[], tuple[Any, AsyncMock]]:
     return _mock_get_data
 
 
+@pytest.fixture
+def mock_check_cache() -> Generator[MagicMock, None, None]:
+    with patch("app.services.feeds.feed_service.check_cache") as mock_cache:
+        yield mock_cache
+
+
+@pytest.fixture
+def mock_cache_set() -> Generator[MagicMock, None, None]:
+    with patch("app.services.feeds.feed_service.cache_set") as mock_cache:
+        yield mock_cache
+
+
 @pytest.mark.asyncio
 async def test_get_10_feeds_success(
-    captured_logs,
-    mock_get_data: Generator[MagicMock, None, None],
+    captured_logs, mock_get_data, mock_check_cache, mock_cache_set
 ):
     expected_comment_counts = DEFAULT_COMMENT_COUNT_TABLE
     _async_mock = mock_get_data
+    mock_check_cache.return_value = None
     feeds = await get_10_feeds(start=0, limit=5)
 
     log_counts = count_log_events(captured_logs, "get_10_feeds")
@@ -138,12 +151,11 @@ async def test_get_10_feeds_success(
 
 @pytest.mark.asyncio
 async def test_get_10_feeds_success_with_factory(
-    captured_logs,
-    mock_get_data_factory: Callable[[], tuple[Any, AsyncMock]],
+    captured_logs, mock_get_data_factory, mock_check_cache, mock_cache_set
 ):
 
     expected_comment_counts = DEFAULT_COMMENT_COUNT_TABLE
-
+    mock_check_cache.return_value = None
     _patcher, _async_mock = mock_get_data_factory(
         DEFAULT_POST_DATA, DEFAULT_COMMENT_DATA
     )
@@ -177,10 +189,13 @@ async def test_get_10_feeds_success_with_factory(
 @pytest.mark.asyncio
 async def test_get_10_feeds_success_empty_response(
     captured_logs,
-    mock_get_data_factory: Callable[[], tuple[Any, AsyncMock]],
+    mock_get_data_factory,
+    mock_check_cache,
+    mock_cache_set,
     post_data: List[Dict[str, Any]],
     comment_data: List[Dict[str, Any]],
 ):
+    mock_check_cache.return_value = None
     _patcher, _async_mock = mock_get_data_factory(post_data, comment_data)
     feeds = await get_10_feeds(start=0, limit=5)
     _patcher.stop()
@@ -203,9 +218,11 @@ async def test_get_10_feeds_success_empty_response(
 @pytest.mark.asyncio
 async def test_get_10_feeds_raises_service_exception(
     captured_logs,
-    mock_get_data_factory: Callable[[], tuple[Any, AsyncMock]],
+    mock_get_data_factory,
+    mock_check_cache,
     mock_side_effect: BaseException,
 ):
+    mock_check_cache.return_value = None
     _patcher, _async_mock = mock_get_data_factory(
         DEFAULT_POST_DATA, DEFAULT_COMMENT_DATA
     )

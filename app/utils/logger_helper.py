@@ -1,7 +1,24 @@
+import logging
+import structlog
 from app.logging import logger
 from typing import Any
 
 allowed_log_levels = {"debug", "info", "warning", "error", "critical"}
+
+
+def debug_logger(name: str, level=logging.DEBUG):
+    # Get or create the underlying Python logger
+    py_logger = logging.getLogger(name)
+    py_logger.setLevel(level)
+
+    # Only attach a StreamHandler if it doesn’t already have one
+    if not py_logger.handlers:
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(level)
+        py_logger.addHandler(console_handler)
+
+    # Return the structlog logger bound to the same Python logger
+    return structlog.get_logger(name)
 
 
 def handle_log(

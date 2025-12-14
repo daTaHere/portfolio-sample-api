@@ -10,7 +10,6 @@ To use the logger in other modules, import it from this file:
 from app.logging import logger
 """
 
-logger = structlog.get_logger()
 
 # Configure structured logging
 structlog.configure(
@@ -29,3 +28,5 @@ structlog.configure(
     logger_factory=structlog.stdlib.LoggerFactory(),
     cache_logger_on_first_use=True,
 )
+
+logger = structlog.get_logger("app")

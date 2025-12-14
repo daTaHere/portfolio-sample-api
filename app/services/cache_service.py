@@ -1,16 +1,18 @@
 """Cache management functions using Redis."""
 
 import json
-from typing import Dict
+from typing import Dict, List
 from redis.exceptions import ConnectionError, TimeoutError, DataError
 from app.clients.redis_client import redis_client
 
 from app.exceptions.base import APIException, ServiceException
 from app.exceptions.exception_handlers import handle_service_error
-from app.utils.logger_helper import handle_log
+from app.utils.logger_helper import handle_log, debug_logger
+
+cache_logger = debug_logger("cache_helpers")
 
 
-def cache_set(key: str, value: dict, ttl: int = 60) -> None:
+def cache_set(key: str, value: dict, ttl: int = 10) -> None:
     """
     Set a cache value in Redis with a specified TTL (time-to-live) in seconds.
     """
@@ -113,6 +115,7 @@ def cache_get(key: str) -> Dict | None:
             service_method="cache_get",
             method="GET",
         )
+
     return data
 
 
