@@ -126,8 +126,8 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
             "end": start + len(feed_data),
             "data": feeds_schema.dump(feed_data),
         }
+
         cache_set("feeds", cache_data, 10)
-        feed_logger.debug("Set Cache feed data.", extra={"feed_count": len(cache_data)})
         feeds = feed_data[:limit]
 
     except (TypeError, ValueError) as e:

@@ -39,8 +39,6 @@ def create_app(config_name=None):
     init_redis(app)
     CORS(app)
 
-    # logging.basicConfig(level=logging.INFO)
-
     # Register blueprints
     from app.routes.user_routes import user_bp
     from app.routes.feed_routes import feed_bp

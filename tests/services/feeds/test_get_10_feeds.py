@@ -202,8 +202,8 @@ async def test_get_10_feeds_success(
 
     log_counts = count_log_events(captured_logs, "get_10_feeds")
 
-    mock_check_cache.assert_called_once
-    mock_cache_set.assert_called_once
+    mock_check_cache.assert_called_once()
+    mock_cache_set.assert_called_once()
     assert _async_mock.await_count == 2
     assert isinstance(feeds, List)
     assert all(isinstance(feed, PostWithComments) for feed in feeds)
@@ -233,8 +233,8 @@ async def test_get_10_feeds_success_with_factory(
 
     log_counts = count_log_events(captured_logs, "get_10_feeds")
 
-    mock_check_cache.assert_called_once
-    mock_cache_set.assert_called_once
+    mock_check_cache.assert_called_once()
+    mock_cache_set.assert_called_once()
     assert _async_mock.await_count == 2
     assert isinstance(feeds, List)
     assert all(isinstance(feed, PostWithComments) for feed in feeds)
@@ -272,8 +272,8 @@ async def test_get_10_feeds_success_empty_response(
 
     log_counts = count_log_events(captured_logs, "get_10_feeds")
 
-    mock_check_cache.assert_called_once
-    mock_cache_set.assert_called_once
+    mock_check_cache.assert_called_once()
+    mock_cache_set.assert_called_once()
     assert _async_mock.await_count == 2
     assert isinstance(feeds, List)
     assert len(feeds) == 0
@@ -293,7 +293,7 @@ async def test_get_10_feeds_success_with_cache(
 
     log_counts = count_log_events(captured_logs, "get_10_feeds")
 
-    mock_check_cache.assert_called_once
+    mock_check_cache.assert_called_once()
     assert mock_get_data.await_count == 0
     assert isinstance(feeds, List)
     assert all(isinstance(feed, PostWithComments) for feed in feeds)
@@ -313,7 +313,7 @@ async def test_get_10_feeds_success_with_cache_log_validation_error(
 
     log_counts = count_log_events(captured_logs, "get_10_feeds")
 
-    mock_check_cache.assert_called_once
+    mock_check_cache.assert_called_once()
     assert mock_get_data.await_count == 2
     assert isinstance(feeds, List)
     assert all(isinstance(feed, PostWithComments) for feed in feeds)
@@ -346,8 +346,8 @@ async def test_get_10_feeds_raises_service_exception(
 
     log_counts = count_log_events(captured_logs, "get_10_feeds")
 
-    mock_check_cache.assert_called_once
-    mock_cache_set.assert_not_called
+    mock_check_cache.assert_called_once()
+    mock_cache_set.assert_not_called()
     assert mock_get_data.await_count == 2
     assert log_counts.get("CACHE_MISSED")
     assert not log_counts.get("SUCCESS")
