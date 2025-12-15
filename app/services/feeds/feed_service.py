@@ -46,6 +46,7 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
         )
         try:
             feeds = feeds_schema.load(is_cached)
+
             feed_logger.debug(
                 "Loaded cached feeds. Returning subset.",
                 extra={"feed_count": len(feeds)},
@@ -76,6 +77,18 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
                 service_method="get_10_feeds",
                 model="PostWithComments",
             )
+    else:
+        feed_logger.debug(
+            "Line 42: feed_service.get_10_feeds. Validate 'feeds': Cache miss !!!!!."
+        )
+        handle_log(
+            f"Cache miss. Fetching data from API.",
+            method="GET",
+            event_key="CACHE_MISSED",
+            log_level="info",
+            service_method="get_10_feeds",
+            model="PostWithComments",
+        )
 
     posts_coro = get_data(POST_ENDPOINT, start, limit)
     comments_coro = get_data(COMMENT_ENDPOINT, start, limit)
@@ -113,7 +126,7 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
             "end": start + len(feed_data),
             "data": feeds_schema.dump(feed_data),
         }
-        cache_set("feeds", cache_data, 60)
+        cache_set("feeds", cache_data, 10)
         feed_logger.debug("Set Cache feed data.", extra={"feed_count": len(cache_data)})
         feeds = feed_data[:limit]
 
