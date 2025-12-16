@@ -10,8 +10,9 @@ def debug_logger(name: str, level=logging.DEBUG):
     """
     Scoped logger that uses structlog’s Processor framework but outputs to a Python logger
 
-        - Args: name (str): The name of the logger.
-        - level: The logging level (default: logging.DEBUG).
+    Args:
+        name (str): The name of the logger.
+        level (int): The logging level (default: logging.DEBUG).
     """
     py_logger = logging.getLogger(name)
     py_logger.setLevel(level)
