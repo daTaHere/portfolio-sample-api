@@ -6,7 +6,7 @@ Business logic for feed operations.
 import asyncio
 
 from collections import defaultdict
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from marshmallow import ValidationError
 
@@ -52,7 +52,7 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
 
     posts: List[Post] = []
     comments_by_post: Dict[int, List[Comment]] = defaultdict(list)
-    feeds: List[PostWithComments] = []
+    feeds: List[PostWithComments] | List[Dict[str, Any]] = []
 
     cache_hit = cache_get("feeds")
     if cache_hit:

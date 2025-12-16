@@ -89,7 +89,7 @@ DEFAULT_CACHED_DATA = {
             "comments": [
                 {
                     "id": 1,
-                    "postId": 1,  # this is the internal field expected by Comment
+                    "postId": 1,
                     "name": "Commenter 1",
                     "email": "commenter1@test.com",
                     "body": "First comment",
@@ -117,7 +117,7 @@ DEFAULT_CACHED_DATA = {
             "comments": [
                 {
                     "id": 1,
-                    "postId": 2,  # this is the internal field expected by Comment
+                    "postId": 2,
                     "name": "Commenter 1",
                     "email": "commenter1@test.com",
                     "body": "First comment",
@@ -143,7 +143,7 @@ DEFAULT_CACHED_DATA = {
             "comments": [
                 {
                     "id": 1,
-                    "postId": 5,  # this is the internal field expected by Comment
+                    "postId": 5,
                     "name": "Commenter 1",
                     "email": "commenter1@test.com",
                     "body": "First comment",
@@ -249,7 +249,6 @@ async def test_get_10_feeds_success_with_factory(
 
     log_counts = count_log_events(captured_logs, "get_10_feeds")
 
-    # mock_check_cache.assert_called_once()
     mock_cache_get.assert_called_once()
     mock_cache_set.assert_called_once()
     assert _async_mock.await_count == 2
@@ -379,21 +378,33 @@ async def test_get_10_feeds_raises_service_exception(
     assert isinstance(exc_info.value, ServiceException)
 
 
+@pytest.mark.parametrize(
+    "start, limit",
+    [
+        (-1, 5),
+        (0, 0),
+        (0, 101),
+        (10, -5),
+    ],
+)
 @pytest.mark.asyncio
 async def test_get_10_feeds_raises_value_error(
     captured_logs,
     mock_get_data,
     mock_cache_get,
-    mock_check_cache,
+    mock_cache_set,
+    start: int,
+    limit: int,
 ):
 
     with pytest.raises(ValueError) as exc_info:
-        await get_10_feeds(start=-1, limit=5)
+        await get_10_feeds(start=start, limit=limit)
 
     log_counts = count_log_events(captured_logs, "get_10_feeds")
 
-    mock_check_cache.assert_not_called()
-    mock_get_data.assert_not_called()
+    mock_cache_get.assert_not_called()
+    mock_cache_set.assert_not_called()
+    assert mock_get_data.await_count == 0
     assert log_counts.get("VALUE_ERROR")
     assert not log_counts.get("SUCCESS")
     assert "Invalid arguments" in str(exc_info.value)

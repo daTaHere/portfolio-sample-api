@@ -53,7 +53,7 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
         )
     if len(data) > prefetch_limit:
         raise_error(
-            f"Internal Server Error Received: {len(data)} items, Expected: up to {limit} items.",
+            f"Internal Server Error Received: {len(data)} items, Expected: up to {prefetch_limit} items.",
             f"Response item count mismatch",
             exc_type=ServiceException,
             url=url,
