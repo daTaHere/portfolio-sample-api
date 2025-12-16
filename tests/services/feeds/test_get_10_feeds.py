@@ -286,7 +286,6 @@ async def test_get_10_feeds_success_empty_response(
 async def test_get_10_feeds_success_with_cache(
     captured_logs, mock_get_data, mock_check_cache, mock_cache_set
 ):
-    expected_comment_counts = DEFAULT_COMMENT_COUNT_TABLE
     mock_check_cache.return_value = DEFAULT_CACHED_DATA
 
     feeds = await get_10_feeds(start=0, limit=5)

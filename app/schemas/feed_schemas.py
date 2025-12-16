@@ -27,6 +27,7 @@ class PostWithCommentsSchema(Schema):
 
     @post_load
     def make_post_with_comments(self, data, **kwargs):
+        """Converts the deserialized data into a PostWithComments object."""
         post = Post(
             {
                 "id": data["id"],

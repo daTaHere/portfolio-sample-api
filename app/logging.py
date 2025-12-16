@@ -29,4 +29,4 @@ structlog.configure(
     cache_logger_on_first_use=True,
 )
 
-logger = structlog.get_logger("app")
+logger = structlog.get_logger()

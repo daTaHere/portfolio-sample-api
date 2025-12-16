@@ -1,11 +1,11 @@
 import pytest
-from typing import Any, Dict
+from typing import Any, Dict, Generator
 from unittest.mock import MagicMock, patch
 from app.services.feeds.feed_validators import check_cache
 
 
 @pytest.fixture
-def mock_cache_get():
+def mock_cache_get() -> Generator[MagicMock, None, None]:
     with patch("app.services.feeds.feed_validators.cache_get") as mock:
         yield mock  # yields the active mock
 

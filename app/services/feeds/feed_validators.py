@@ -70,7 +70,7 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
     return data
 
 
-def check_cache(key: str, start: int, limit: int):
+def check_cache(key: str, start: int, limit: int) -> List[Dict[str, Any]] | None:
     """
     Check if prefetched data is available in cache and
     if the requested range is within the cached range.
@@ -78,7 +78,9 @@ def check_cache(key: str, start: int, limit: int):
     data = cache_get(key)
     cached: List[Dict[str, Any]] | None = None
     if data:
-        _start, _end, _data = data.values()
+        _start, _end, _data = (
+            data.values()
+        )  # make a schema or class for feed cache object
         offset = start - _start
         if _start <= start and (start + limit - 1) <= _end:
             cached = _data[offset : offset + limit]
