@@ -7,6 +7,8 @@ from app.utils.logger_helper import handle_log
 from app.services.feeds.feed_fetchers import send_request
 from app.services.cache_service import cache_get
 
+from app.dto.feeds.feed_cache_schema import FeedCacheSchema
+
 JSONPLACEHOLDER_BASE_URL = "https://jsonplaceholder.typicode.com"
 
 
@@ -15,8 +17,10 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
     Fetch records from a specific endpoint and return as list of dicts.
     Handles URL construction, logging, and response validation.
     """
-    cache_limit = limit * 2
-    url = f"{JSONPLACEHOLDER_BASE_URL}/{endpoint}?_start={start}&_limit={cache_limit}"
+    prefetch_limit = limit * 2
+    url = (
+        f"{JSONPLACEHOLDER_BASE_URL}/{endpoint}?_start={start}&_limit={prefetch_limit}"
+    )
 
     handle_log(
         "Constructing endpoint URL",
@@ -47,7 +51,7 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
             model=endpoint.upper(),
             received_type=type(data).__name__,
         )
-    if len(data) > cache_limit:
+    if len(data) > prefetch_limit:
         raise_error(
             f"Internal Server Error Received: {len(data)} items, Expected: up to {limit} items.",
             f"Response item count mismatch",
@@ -70,16 +74,22 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
     return data
 
 
-def check_cache(key: str, start: int, limit: int):
+def check_cache(
+    cache_data: Dict[str, Any], start: int, limit: int
+) -> List[Dict[str, Any]] | None:
     """
     Check if prefetched data is available in cache and
     if the requested range is within the cached range.
     """
-    data = cache_get(key)
-    cached: List[Dict[str, Any]] | None = None
-    if data:
-        _start, _end, _data = data.values()
+
+    cached_subset: List[Dict[str, Any]] | None = None
+
+    _start, _end, _data = (
+        cache_data.values()
+    )  # make a schema or class for feed cache object
+
+    if start >= _start and (start + limit - 1) <= _end:
         offset = start - _start
-        if _start <= start and (start + limit - 1) <= _end:
-            cached = _data[offset : offset + limit]
-    return cached
+        cached_subset = _data[offset : offset + limit]
+
+    return cached_subset

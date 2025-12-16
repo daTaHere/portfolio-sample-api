@@ -7,7 +7,7 @@ allowed_log_levels = {"debug", "info", "warning", "error", "critical"}
 
 
 def debug_logger(name: str, level=logging.DEBUG):
-    # Get or create the underlying Python logger
+    """Scoped logger that uses structlog’s Processor framework but outputs to a Python logger"""
     py_logger = logging.getLogger(name)
     py_logger.setLevel(level)
 

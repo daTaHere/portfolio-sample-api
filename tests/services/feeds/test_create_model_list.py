@@ -5,7 +5,7 @@ from typing import Dict, List, Type, TypeVar
 from tests.utils import count_log_events
 
 from app.services.feeds.feed_builders import create_model_list
-from app.models.post_detail_model import Post, Comment
+from app.models.feed_model import Post, Comment
 from app.exceptions.base import ServiceException
 
 T = TypeVar("T", bound=Post | Comment)

@@ -1,11 +1,13 @@
 import pytest
+from marshmallow import ValidationError
 from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Any, Callable, Dict, List, Generator, Tuple
 from tests.utils import count_log_events
 
 from app.services.feeds.feed_service import get_10_feeds
 from app.exceptions.base import ServiceException
-from app.models.post_detail_model import PostWithComments
+from app.models.feed_model import PostWithComments
+
 
 DEFAULT_POST_DATA = [
     {
@@ -76,76 +78,81 @@ DEFAULT_COMMENT_DATA = [
         "body": "harum non quasi et ratione\ntempore iure ex voluptates in ratione\nharum architecto fugit inventore cupiditate\nvoluptates magni quo et",
     },
 ]
-DEFAULT_CACHED_DATA = [
-    {
-        "id": 1,
-        "title": "Test Feed 1",
-        "body": "This is a test feed",
-        "comments": [
-            {
-                "id": 1,
-                "postId": 1,  # this is the internal field expected by Comment
-                "name": "Commenter 1",
-                "email": "commenter1@test.com",
-                "body": "First comment",
-            },
-            {
-                "id": 2,
-                "postId": 1,
-                "name": "Commenter 2",
-                "email": "commenter2@test.com",
-                "body": "Second comment",
-            },
-            {
-                "id": 3,
-                "postId": 1,
-                "name": "Commenter 3",
-                "email": "commenter3@test.com",
-                "body": "Third comment",
-            },
-        ],
-    },
-    {
-        "id": 2,
-        "title": "Test Feed 2",
-        "body": "Another test feed",
-        "comments": [
-            {
-                "id": 1,
-                "postId": 2,  # this is the internal field expected by Comment
-                "name": "Commenter 1",
-                "email": "commenter1@test.com",
-                "body": "First comment",
-            },
-        ],
-    },
-    {
-        "id": 3,
-        "title": "Test Feed 3",
-        "body": "Yet another feed",
-        "comments": [],
-    },
-    {
-        "id": 4,
-        "title": "Test Feed 4",
-        "body": "More feed data",
-        "comments": [],
-    },
-    {
-        "id": 5,
-        "title": "Test Feed 5",
-        "body": "Last feed for test",
-        "comments": [
-            {
-                "id": 1,
-                "postId": 5,  # this is the internal field expected by Comment
-                "name": "Commenter 1",
-                "email": "commenter1@test.com",
-                "body": "First comment",
-            },
-        ],
-    },
-]
+DEFAULT_CACHED_DATA = {
+    "start": 0,
+    "end": 5,
+    "data": [
+        {
+            "id": 1,
+            "title": "Test Feed 1",
+            "body": "This is a test feed",
+            "comments": [
+                {
+                    "id": 1,
+                    "postId": 1,  # this is the internal field expected by Comment
+                    "name": "Commenter 1",
+                    "email": "commenter1@test.com",
+                    "body": "First comment",
+                },
+                {
+                    "id": 2,
+                    "postId": 1,
+                    "name": "Commenter 2",
+                    "email": "commenter2@test.com",
+                    "body": "Second comment",
+                },
+                {
+                    "id": 3,
+                    "postId": 1,
+                    "name": "Commenter 3",
+                    "email": "commenter3@test.com",
+                    "body": "Third comment",
+                },
+            ],
+        },
+        {
+            "id": 2,
+            "title": "Test Feed 2",
+            "body": "Another test feed",
+            "comments": [
+                {
+                    "id": 1,
+                    "postId": 2,  # this is the internal field expected by Comment
+                    "name": "Commenter 1",
+                    "email": "commenter1@test.com",
+                    "body": "First comment",
+                },
+            ],
+        },
+        {
+            "id": 3,
+            "title": "Test Feed 3",
+            "body": "Yet another feed",
+            "comments": [],
+        },
+        {
+            "id": 4,
+            "title": "Test Feed 4",
+            "body": "More feed data",
+            "comments": [],
+        },
+        {
+            "id": 5,
+            "title": "Test Feed 5",
+            "body": "Last feed for test",
+            "comments": [
+                {
+                    "id": 1,
+                    "postId": 5,  # this is the internal field expected by Comment
+                    "name": "Commenter 1",
+                    "email": "commenter1@test.com",
+                    "body": "First comment",
+                },
+            ],
+        },
+    ],
+}
+
 DEFAULT_COMMENT_COUNT_TABLE = {
     1: 3,
     2: 1,
@@ -186,6 +193,12 @@ def mock_check_cache() -> Generator[MagicMock, None, None]:
 
 
 @pytest.fixture
+def mock_cache_get() -> Generator[MagicMock, None, None]:
+    with patch("app.services.feeds.feed_service.cache_get") as mock_cache:
+        yield mock_cache
+
+
+@pytest.fixture
 def mock_cache_set() -> Generator[MagicMock, None, None]:
     with patch("app.services.feeds.feed_service.cache_set") as mock_cache:
         yield mock_cache
@@ -193,16 +206,16 @@ def mock_cache_set() -> Generator[MagicMock, None, None]:
 
 @pytest.mark.asyncio
 async def test_get_10_feeds_success(
-    captured_logs, mock_get_data, mock_check_cache, mock_cache_set
+    captured_logs, mock_get_data, mock_cache_get, mock_cache_set
 ):
     expected_comment_counts = DEFAULT_COMMENT_COUNT_TABLE
     _async_mock = mock_get_data
-    mock_check_cache.return_value = None
+    mock_cache_get.return_value = None
     feeds = await get_10_feeds(start=0, limit=5)
 
     log_counts = count_log_events(captured_logs, "get_10_feeds")
 
-    mock_check_cache.assert_called_once()
+    mock_cache_get.assert_called_once()
     mock_cache_set.assert_called_once()
     assert _async_mock.await_count == 2
     assert isinstance(feeds, List)
@@ -220,11 +233,14 @@ async def test_get_10_feeds_success(
 
 @pytest.mark.asyncio
 async def test_get_10_feeds_success_with_factory(
-    captured_logs, mock_get_data_factory, mock_check_cache, mock_cache_set
+    captured_logs,
+    mock_get_data_factory,
+    mock_cache_get,
+    mock_cache_set,
 ):
 
     expected_comment_counts = DEFAULT_COMMENT_COUNT_TABLE
-    mock_check_cache.return_value = None
+    mock_cache_get.return_value = None
     _patcher, _async_mock = mock_get_data_factory(
         DEFAULT_POST_DATA, DEFAULT_COMMENT_DATA
     )
@@ -233,7 +249,8 @@ async def test_get_10_feeds_success_with_factory(
 
     log_counts = count_log_events(captured_logs, "get_10_feeds")
 
-    mock_check_cache.assert_called_once()
+    # mock_check_cache.assert_called_once()
+    mock_cache_get.assert_called_once()
     mock_cache_set.assert_called_once()
     assert _async_mock.await_count == 2
     assert isinstance(feeds, List)
@@ -261,18 +278,19 @@ async def test_get_10_feeds_success_empty_response(
     captured_logs,
     mock_get_data_factory,
     mock_check_cache,
+    mock_cache_get,
     mock_cache_set,
     post_data: List[Dict[str, Any]],
     comment_data: List[Dict[str, Any]],
 ):
-    mock_check_cache.return_value = None
+    mock_cache_get.return_value = None
     _patcher, _async_mock = mock_get_data_factory(post_data, comment_data)
     feeds = await get_10_feeds(start=0, limit=5)
     _patcher.stop()
 
     log_counts = count_log_events(captured_logs, "get_10_feeds")
 
-    mock_check_cache.assert_called_once()
+    mock_cache_get.assert_called_once()
     mock_cache_set.assert_called_once()
     assert _async_mock.await_count == 2
     assert isinstance(feeds, List)
@@ -284,19 +302,20 @@ async def test_get_10_feeds_success_empty_response(
 
 @pytest.mark.asyncio
 async def test_get_10_feeds_success_with_cache(
-    captured_logs, mock_get_data, mock_check_cache, mock_cache_set
+    captured_logs, mock_get_data, mock_check_cache, mock_cache_get, mock_cache_set
 ):
-    expected_comment_counts = DEFAULT_COMMENT_COUNT_TABLE
-    mock_check_cache.return_value = DEFAULT_CACHED_DATA
+    mock_cache_get.return_value = DEFAULT_CACHED_DATA
+    mock_check_cache.return_value = DEFAULT_CACHED_DATA["data"]
 
     feeds = await get_10_feeds(start=0, limit=5)
 
     log_counts = count_log_events(captured_logs, "get_10_feeds")
 
+    mock_cache_get.assert_called_once()
     mock_check_cache.assert_called_once()
     assert mock_get_data.await_count == 0
     assert isinstance(feeds, List)
-    assert all(isinstance(feed, PostWithComments) for feed in feeds)
+    assert all(isinstance(feed, Dict) for feed in feeds)
     assert len(feeds) == 5
     assert log_counts.get("CACHE_SUCCESS")
     assert not log_counts.get("ERROR")
@@ -304,16 +323,19 @@ async def test_get_10_feeds_success_with_cache(
 
 @pytest.mark.asyncio
 async def test_get_10_feeds_success_with_cache_log_validation_error(
-    captured_logs, mock_get_data, mock_check_cache, mock_cache_set
+    captured_logs, mock_get_data, mock_check_cache, mock_cache_get, mock_cache_set
 ):
 
-    cached_data = {"error": "Invalid data"}
-    mock_check_cache.return_value = cached_data
-    feeds = await get_10_feeds(start=0, limit=5)
+    mock_cache_get.return_value = DEFAULT_CACHED_DATA
+    with patch(
+        "app.services.feeds.feed_service.FeedCacheSchema.load",
+        side_effect=ValidationError("Invalid data"),
+    ):
+        feeds = await get_10_feeds(start=0, limit=5)
 
     log_counts = count_log_events(captured_logs, "get_10_feeds")
 
-    mock_check_cache.assert_called_once()
+    mock_cache_get.assert_called_once()
     assert mock_get_data.await_count == 2
     assert isinstance(feeds, List)
     assert all(isinstance(feed, PostWithComments) for feed in feeds)
@@ -332,10 +354,11 @@ async def test_get_10_feeds_raises_service_exception(
     captured_logs,
     mock_get_data,
     mock_check_cache,
+    mock_cache_get,
     mock_cache_set,
     mock_side_effect: BaseException,
 ):
-    mock_check_cache.return_value = None
+    mock_cache_get.return_value = None
 
     with patch(
         "app.services.feeds.feed_service.PostWithComments",
@@ -346,7 +369,7 @@ async def test_get_10_feeds_raises_service_exception(
 
     log_counts = count_log_events(captured_logs, "get_10_feeds")
 
-    mock_check_cache.assert_called_once()
+    mock_cache_get.assert_called_once()
     mock_cache_set.assert_not_called()
     assert mock_get_data.await_count == 2
     assert log_counts.get("CACHE_MISSED")
@@ -354,3 +377,24 @@ async def test_get_10_feeds_raises_service_exception(
     assert log_counts.get("ERROR")
     assert "Unexpected error" in str(exc_info.value)
     assert isinstance(exc_info.value, ServiceException)
+
+
+@pytest.mark.asyncio
+async def test_get_10_feeds_raises_value_error(
+    captured_logs,
+    mock_get_data,
+    mock_cache_get,
+    mock_check_cache,
+):
+
+    with pytest.raises(ValueError) as exc_info:
+        await get_10_feeds(start=-1, limit=5)
+
+    log_counts = count_log_events(captured_logs, "get_10_feeds")
+
+    mock_check_cache.assert_not_called()
+    mock_get_data.assert_not_called()
+    assert log_counts.get("VALUE_ERROR")
+    assert not log_counts.get("SUCCESS")
+    assert "Invalid arguments" in str(exc_info.value)
+    assert isinstance(exc_info.value, ValueError)
