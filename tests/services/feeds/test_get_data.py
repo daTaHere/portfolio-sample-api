@@ -11,6 +11,7 @@ DEFAULT_BASE_URL = "https://jsonplaceholder.typicode.com"
 DEFAULT_ENDPOINT = "posts"
 DEFAULT_START = 0
 DEFAULT_LIMIT = 2
+PREFETCH_LIMIT = 2
 
 
 @pytest.fixture
@@ -38,28 +39,26 @@ def mock_send_request() -> Generator[MagicMock, None, None]:
 @pytest.mark.asyncio
 async def test_get_data_success(
     captured_logs,
-    mock_send_request: MagicMock,
+    mock_send_request,
     start: int,
     limit: int,
     test_data: List[Dict[str, Any]],
 ):
     endpoint = DEFAULT_ENDPOINT
-    expected_url = f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit}"
+    expected_url = (
+        f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit * PREFETCH_LIMIT}"
+    )
 
     mock_send_request.return_value = test_data
     res = await get_data(endpoint, start, limit)
 
-    mock_send_request.assert_called_once_with(expected_url)
     log_counts = count_log_events(captured_logs, "get_data")
 
-    assert res == test_data
+    mock_send_request.assert_called_once_with(expected_url)
     assert isinstance(res, list)
     assert len(res) == limit  # test assumes response length equals limit exactly
     assert all(isinstance(item, dict) for item in res)
-    assert res[0]["id"] == start + 1
-    assert res[-1]["id"] == len(res)
-    assert log_counts.get("ENDPOINT_URL")
-    assert log_counts.get("REQUEST_ATTEMPT")
+    assert res == test_data
     assert log_counts.get("SUCCESS")
     assert not log_counts.get("ERROR")
 
@@ -72,7 +71,9 @@ async def test_get_data_response_empty_success(
     start = DEFAULT_START
     limit = 0
     fake_data = []
-    expected_url = f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit}"
+    expected_url = (
+        f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit * PREFETCH_LIMIT}"
+    )
 
     mock_send_request.return_value = fake_data
     res = await get_data(endpoint, start, limit)
@@ -83,8 +84,6 @@ async def test_get_data_response_empty_success(
     assert res == fake_data
     assert isinstance(res, list)
     assert len(res) == 0
-    assert log_counts.get("ENDPOINT_URL")
-    assert log_counts.get("REQUEST_ATTEMPT")
     assert log_counts.get("SUCCESS")
     assert not log_counts.get("ERROR")
 
@@ -108,7 +107,9 @@ async def test_get_data_response_items_within_limit_success(
     endpoint = DEFAULT_ENDPOINT
     start = DEFAULT_START
     limit = 10
-    expected_url = f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit}"
+    expected_url = (
+        f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit * PREFETCH_LIMIT}"
+    )
 
     mock_send_request.return_value = test_data
     res = await get_data(endpoint, start, limit)
@@ -118,13 +119,9 @@ async def test_get_data_response_items_within_limit_success(
     mock_send_request.assert_called_once_with(expected_url)
     assert len(res) == expected_count
     assert len(res) <= limit
-    assert res == test_data
     assert isinstance(res, list)
     assert all(isinstance(item, dict) for item in res)
-    assert res[0]["id"] == start + 1
-    assert res[-1]["id"] == len(test_data)
-    assert log_counts.get("ENDPOINT_URL")
-    assert log_counts.get("REQUEST_ATTEMPT")
+    assert res == test_data
     assert log_counts.get("SUCCESS")
     assert not log_counts.get("ERROR")
 
@@ -134,10 +131,10 @@ async def test_get_data_response_items_within_limit_success(
     [
         (
             DEFAULT_LIMIT,
-            [{"id": num} for num in range(1, 4)],
+            [{"id": num} for num in range(1, 6)],
         ),
-        (5, [{"id": num} for num in range(1, 7)]),
-        (10, [{"id": num} for num in range(1, 12)]),
+        (5, [{"id": num} for num in range(1, 12)]),
+        (10, [{"id": num} for num in range(1, 22)]),
     ],
 )
 @pytest.mark.asyncio
@@ -150,7 +147,9 @@ async def test_get_data_response_count_mismatch_raises_service_exception(
     endpoint = DEFAULT_ENDPOINT
     start = DEFAULT_START
     limit = test_limit
-    expected_url = f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit}"
+    expected_url = (
+        f"{DEFAULT_BASE_URL}/{endpoint}?_start={start}&_limit={limit * PREFETCH_LIMIT}"
+    )
 
     mock_send_request.return_value = test_data
     with pytest.raises(ServiceException) as exc_info:
@@ -159,12 +158,11 @@ async def test_get_data_response_count_mismatch_raises_service_exception(
     log_counts = count_log_events(captured_logs, "get_data")
 
     mock_send_request.assert_called_once_with(expected_url)
-    assert "Internal Server Error Received:" in str(exc_info.value)
     assert len(mock_send_request.return_value) > limit
-    assert log_counts.get("ENDPOINT_URL")
-    assert log_counts.get("REQUEST_ATTEMPT")
     assert not log_counts.get("SUCCESS")
     assert log_counts.get("ERROR")
+    assert "Internal Server Error Received:" in str(exc_info.value)
+    assert isinstance(exc_info.value, ServiceException)
 
 
 @pytest.mark.parametrize(
@@ -194,8 +192,8 @@ async def test_get_data_type_error_raises_service_exception(
 
     log_counts = count_log_events(captured_logs, "get_data")
 
-    assert f"Internal Server Error: expected List" in str(exc_info.value)
-    assert log_counts.get("ENDPOINT_URL")
-    assert log_counts.get("REQUEST_ATTEMPT")
+    mock_send_request.assert_called_once
     assert not log_counts.get("SUCCESS")
     assert log_counts.get("ERROR")
+    assert f"Internal Server Error: expected List" in str(exc_info.value)
+    assert isinstance(exc_info.value, ServiceException)

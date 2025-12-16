@@ -6,28 +6,89 @@ Business logic for feed operations.
 import asyncio
 
 from collections import defaultdict
-from typing import Dict, List
+from typing import Any, Dict, List
+
+from marshmallow import ValidationError
 
 from app.logging import logger
+from app.utils.logger_helper import handle_log, debug_logger
+
+from app.schemas.feed_schemas import PostWithCommentsSchema
 from app.models import Post, Comment, PostWithComments
 
 from app.exceptions.base import ServiceException
 from app.exceptions.exception_handlers import handle_service_error
 
-from app.services.feeds.feed_validators import get_data
 from app.services.feeds.feed_builders import create_model_list
-
-from app.utils.logger_helper import handle_log
+from app.services.feeds.feed_validators import get_data, check_cache
+from app.services.cache_service import cache_set
 
 
 POST_ENDPOINT = "posts"
 COMMENT_ENDPOINT = "comments"
+
+feed_logger = debug_logger("get_10_feeds")
+feeds_schema = PostWithCommentsSchema(many=True)
 
 
 async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments]:
     """
     Orchestrates fetching posts and comments, builds feed objects.
     """
+    posts: List[Post] = []
+    comments_by_post: Dict[int, List[Comment]] = defaultdict(list)
+    feeds: List[PostWithComments] = []
+
+    is_cached = check_cache("feeds", start, limit)
+    if is_cached:
+        feed_logger.debug(
+            "Line 42: feed_service.get_10_feeds. Validate 'feeds': Cache hit !!!!!."
+        )
+        try:
+            feeds = feeds_schema.load(is_cached)
+
+            feed_logger.debug(
+                "Loaded cached feeds. Returning subset.",
+                extra={"feed_count": len(feeds)},
+            )
+            handle_log(
+                f"Cached feeds loaded successfully. Returning subset.",
+                method="GET",
+                event_key="CACHE_SUCCESS",
+                log_level="info",
+                service_method="get_10_feeds",
+                model="PostWithComments",
+            )
+            return feeds
+        except ValidationError as e:
+            feed_logger.error(
+                "Failed to load cached feeds with PostWithCommentsSchema().",
+                extra={
+                    "service_method": "get_10_feeds",
+                    "error": e,
+                    "block": "cache_get",
+                },
+            )
+            handle_log(
+                f"Failed to load cached feeds: Validation Error.",
+                method="GET",
+                event_key="CACHE_FAILURE",
+                log_level="error",
+                service_method="get_10_feeds",
+                model="PostWithComments",
+            )
+    else:
+        feed_logger.debug(
+            "Line 42: feed_service.get_10_feeds. Validate 'feeds': Cache miss !!!!!."
+        )
+        handle_log(
+            f"Cache miss. Fetching data from API.",
+            method="GET",
+            event_key="CACHE_MISSED",
+            log_level="info",
+            service_method="get_10_feeds",
+            model="PostWithComments",
+        )
 
     posts_coro = get_data(POST_ENDPOINT, start, limit)
     comments_coro = get_data(COMMENT_ENDPOINT, start, limit)
@@ -46,7 +107,6 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
     )
 
     # Organize comments by post_id
-    comments_by_post: Dict[int, List[Comment]] = defaultdict(list)
     for c in comments:
         comments_by_post[c._postId].append(c)
     logger.info(
@@ -58,9 +118,17 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
         },
     )
     try:
-        feeds = [
+        feed_data = [
             PostWithComments(post, comments_by_post.get(post._id, [])) for post in posts
         ]
+        cache_data = {
+            "start": start,
+            "end": start + len(feed_data),
+            "data": feeds_schema.dump(feed_data),
+        }
+
+        cache_set("feeds", cache_data, 10)
+        feeds = feed_data[:limit]
 
     except (TypeError, ValueError) as e:
         handle_service_error(
