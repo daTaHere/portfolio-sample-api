@@ -17,7 +17,7 @@ from app.schemas.feed_schemas import PostWithCommentsSchema
 from app.models import Post, Comment, PostWithComments
 
 from app.exceptions.base import ServiceException
-from app.exceptions.exception_handlers import handle_service_error
+from app.exceptions.exception_handlers import handle_service_error, raise_error
 
 from app.services.feeds.feed_builders import create_model_list
 from app.services.feeds.feed_validators import get_data, check_cache
@@ -35,6 +35,18 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
     """
     Orchestrates fetching posts and comments, builds feed objects.
     """
+    if start < 0 or limit <= 0 or limit > 100:
+        handle_log(
+            f"Invalid start or limit values. Start: {start}, Limit: {limit}",
+            method="GET",
+            event_key="VALUE_ERROR",
+            log_level="error",
+            service_method="get_10_feeds",
+        )
+        raise ValueError(
+            "Invalid arguments: Expect non-negative values within range 1-100"
+        )
+
     posts: List[Post] = []
     comments_by_post: Dict[int, List[Comment]] = defaultdict(list)
     feeds: List[PostWithComments] = []
@@ -122,9 +134,9 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
             PostWithComments(post, comments_by_post.get(post._id, [])) for post in posts
         ]
         cache_data = {
-            "start": start,
-            "end": start + len(feed_data),
-            "data": feeds_schema.dump(feed_data),
+            "start": start,  # The start index of current feed to be cached
+            "end": start + len(feed_data),  # The end index of current feed to be cached
+            "data": feeds_schema.dump(feed_data),  # The deserialized data to be cached
         }
 
         cache_set("feeds", cache_data, 10)

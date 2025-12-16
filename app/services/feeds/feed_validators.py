@@ -15,8 +15,10 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
     Fetch records from a specific endpoint and return as list of dicts.
     Handles URL construction, logging, and response validation.
     """
-    cache_limit = limit * 2
-    url = f"{JSONPLACEHOLDER_BASE_URL}/{endpoint}?_start={start}&_limit={cache_limit}"
+    prefetch_limit = limit * 2
+    url = (
+        f"{JSONPLACEHOLDER_BASE_URL}/{endpoint}?_start={start}&_limit={prefetch_limit}"
+    )
 
     handle_log(
         "Constructing endpoint URL",
@@ -47,7 +49,7 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
             model=endpoint.upper(),
             received_type=type(data).__name__,
         )
-    if len(data) > cache_limit:
+    if len(data) > prefetch_limit:
         raise_error(
             f"Internal Server Error Received: {len(data)} items, Expected: up to {limit} items.",
             f"Response item count mismatch",

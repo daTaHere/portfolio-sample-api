@@ -353,3 +353,23 @@ async def test_get_10_feeds_raises_service_exception(
     assert log_counts.get("ERROR")
     assert "Unexpected error" in str(exc_info.value)
     assert isinstance(exc_info.value, ServiceException)
+
+
+@pytest.mark.asyncio
+async def test_get_10_feeds_raises_value_error(
+    captured_logs,
+    mock_get_data,
+    mock_check_cache,
+):
+
+    with pytest.raises(ValueError) as exc_info:
+        await get_10_feeds(start=-1, limit=5)
+
+    log_counts = count_log_events(captured_logs, "get_10_feeds")
+
+    mock_check_cache.assert_not_called()
+    mock_get_data.assert_not_called()
+    assert log_counts.get("VALUE_ERROR")
+    assert not log_counts.get("SUCCESS")
+    assert "Invalid arguments" in str(exc_info.value)
+    assert isinstance(exc_info.value, ValueError)
