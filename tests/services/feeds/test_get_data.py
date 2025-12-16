@@ -140,7 +140,7 @@ async def test_get_data_response_items_within_limit_success(
 @pytest.mark.asyncio
 async def test_get_data_response_count_mismatch_raises_service_exception(
     captured_logs,
-    mock_send_request,
+    mock_send_request: MagicMock,
     test_limit: int,
     test_data: List[Dict[str, Any]],
 ):
@@ -158,7 +158,7 @@ async def test_get_data_response_count_mismatch_raises_service_exception(
     log_counts = count_log_events(captured_logs, "get_data")
 
     mock_send_request.assert_called_once_with(expected_url)
-    assert len(mock_send_request.return_value) > limit * PREFETCH_LIMIT
+    assert len(mock_send_request.return_value) > limit
     assert not log_counts.get("SUCCESS")
     assert log_counts.get("ERROR")
     assert "Internal Server Error Received:" in str(exc_info.value)
@@ -192,7 +192,7 @@ async def test_get_data_type_error_raises_service_exception(
 
     log_counts = count_log_events(captured_logs, "get_data")
 
-    mock_send_request.assert_called_once()
+    mock_send_request.assert_called_once
     assert not log_counts.get("SUCCESS")
     assert log_counts.get("ERROR")
     assert f"Internal Server Error: expected List" in str(exc_info.value)

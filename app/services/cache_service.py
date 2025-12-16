@@ -9,7 +9,7 @@ from app.exceptions.base import APIException, ServiceException
 from app.exceptions.exception_handlers import handle_service_error
 from app.utils.logger_helper import handle_log, debug_logger
 
-cache_logger = debug_logger("cache_service")
+cache_logger = debug_logger("cache_helpers")
 
 
 def cache_set(key: str, value: dict, ttl: int = 10) -> None:
