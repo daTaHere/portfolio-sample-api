@@ -13,15 +13,18 @@ from marshmallow import ValidationError
 from app.logging import logger
 from app.utils.logger_helper import handle_log, debug_logger
 
-from app.schemas.feed_schemas import PostWithCommentsSchema
 from app.models import Post, Comment, PostWithComments
+from app.schemas.feed_schemas import PostWithCommentsSchema
+
+from app.dto.feeds.feed_cache_dto import FeedCache
+from app.dto.feeds.feed_cache_schema import FeedCacheSchema
 
 from app.exceptions.base import ServiceException
-from app.exceptions.exception_handlers import handle_service_error, raise_error
+from app.exceptions.exception_handlers import handle_service_error
 
 from app.services.feeds.feed_builders import create_model_list
 from app.services.feeds.feed_validators import get_data, check_cache
-from app.services.cache_service import cache_set
+from app.services.cache_service import cache_get, cache_set
 
 
 POST_ENDPOINT = "posts"
@@ -51,13 +54,14 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
     comments_by_post: Dict[int, List[Comment]] = defaultdict(list)
     feeds: List[PostWithComments] = []
 
-    is_cached = check_cache("feeds", start, limit)
-    if is_cached:
+    cache_hit = cache_get("feeds")
+    if cache_hit:
         feed_logger.debug(
             "Line 42: feed_service.get_10_feeds. Validate 'feeds': Cache hit !!!!!."
         )
         try:
-            feeds = feeds_schema.load(is_cached)
+            data = FeedCacheSchema().load(cache_hit)
+            feeds = check_cache(data, start, limit)
 
             feed_logger.debug(
                 "Loaded cached feeds. Returning subset.",
@@ -72,6 +76,7 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
                 model="PostWithComments",
             )
             return feeds
+
         except ValidationError as e:
             feed_logger.error(
                 "Failed to load cached feeds with PostWithCommentsSchema().",
@@ -133,12 +138,15 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
         feed_data = [
             PostWithComments(post, comments_by_post.get(post._id, [])) for post in posts
         ]
-        cache_data = {
-            "start": start,  # The start index of current feed to be cached
-            "end": start + len(feed_data),  # The end index of current feed to be cached
-            "data": feeds_schema.dump(feed_data),  # The deserialized data to be cached
-        }
 
+        cache_model = FeedCache(start=start, feeds=feed_data)
+
+        # cache_data = {
+        #     "start": start,  # The start index of current feed to be cached
+        #     "end": start + len(feed_data),  # The end index of current feed to be cached
+        #     "data": feeds_schema.dump(feed_data),  # The deserialized data to be cached
+        # }
+        cache_data = FeedCacheSchema().dump(cache_model)
         cache_set("feeds", cache_data, 10)
         feeds = feed_data[:limit]
 

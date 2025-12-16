@@ -7,6 +7,8 @@ from app.utils.logger_helper import handle_log
 from app.services.feeds.feed_fetchers import send_request
 from app.services.cache_service import cache_get
 
+from app.dto.feeds.feed_cache_schema import FeedCacheSchema
+
 JSONPLACEHOLDER_BASE_URL = "https://jsonplaceholder.typicode.com"
 
 
@@ -72,18 +74,22 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
     return data
 
 
-def check_cache(key: str, start: int, limit: int) -> List[Dict[str, Any]] | None:
+def check_cache(
+    cache_data: Dict[str, Any], start: int, limit: int
+) -> List[Dict[str, Any]] | None:
     """
     Check if prefetched data is available in cache and
     if the requested range is within the cached range.
     """
-    data = cache_get(key)
-    cached: List[Dict[str, Any]] | None = None
-    if data:
-        _start, _end, _data = (
-            data.values()
-        )  # make a schema or class for feed cache object
+
+    cached_subset: List[Dict[str, Any]] | None = None
+
+    _start, _end, _data = (
+        cache_data.values()
+    )  # make a schema or class for feed cache object
+
+    if start >= _start and (start + limit - 1) <= _end:
         offset = start - _start
-        if _start <= start and (start + limit - 1) <= _end:
-            cached = _data[offset : offset + limit]
-    return cached
+        cached_subset = _data[offset : offset + limit]
+
+    return cached_subset

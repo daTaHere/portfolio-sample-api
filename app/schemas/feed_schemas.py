@@ -1,7 +1,7 @@
 """Schemas for serializing and deserializing feed-related data."""
 
 from typing import List
-from marshmallow import Schema, fields, post_load
+from marshmallow import Schema, fields, post_load, post_dump
 from app.models import Comment, Post, PostWithComments
 
 
@@ -25,16 +25,3 @@ class PostWithCommentsSchema(Schema):
     title = fields.Str(required=True)
     body = fields.Str(required=True)
     comments = fields.List(fields.Nested(CommentSchema), required=True)
-
-    @post_load
-    def make_post_with_comments(self, data, **kwargs) -> List[PostWithComments]:
-        """Converts the deserialized data into a PostWithComments object."""
-        post = Post(
-            {
-                "id": data["id"],
-                "title": data["title"],
-                "body": data["body"],
-            }
-        )
-        comments = [Comment(c) for c in data["comments"]]
-        return PostWithComments(post, comments)
