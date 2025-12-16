@@ -1,8 +1,6 @@
 """Schemas for serializing and deserializing feed-related data."""
 
-from typing import List
-from marshmallow import Schema, fields, post_load, post_dump
-from app.models import Comment, Post, PostWithComments
+from marshmallow import Schema, fields
 
 
 class CommentSchema(Schema):

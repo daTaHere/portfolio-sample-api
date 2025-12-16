@@ -52,7 +52,7 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
 
     posts: List[Post] = []
     comments_by_post: Dict[int, List[Comment]] = defaultdict(list)
-    feeds: List[PostWithComments] = []
+    feeds: List[PostWithComments] | List[Dict[str, Any]] = []
 
     cache_hit = cache_get("feeds")
     if cache_hit:
@@ -140,14 +140,9 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
         ]
 
         cache_model = FeedCache(start=start, feeds=feed_data)
-
-        # cache_data = {
-        #     "start": start,  # The start index of current feed to be cached
-        #     "end": start + len(feed_data),  # The end index of current feed to be cached
-        #     "data": feeds_schema.dump(feed_data),  # The deserialized data to be cached
-        # }
         cache_data = FeedCacheSchema().dump(cache_model)
         cache_set("feeds", cache_data, 10)
+
         feeds = feed_data[:limit]
 
     except (TypeError, ValueError) as e:
