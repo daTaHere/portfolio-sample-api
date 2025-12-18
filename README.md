@@ -164,14 +164,13 @@ export FLASK_ENV=production
 - Production monitoring & alerting
 
 ---
+
 ## 👨‍💻 Author
 
 **Adam Huynh**  
 [🌐 adamhuynh.dev](https://adamhuynh.dev)  
 Full Stack Engineer  
-React • TypeScript • Python • C# 
-• Flask/Django • ASP.NET Core • SQL 
-• DevOps • Cloud Architecture
+React • TypeScript • Python • C# • Flask/Django • ASP.NET Core • SQL • DevOps • Cloud Architecture
 
 ---
 

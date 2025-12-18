@@ -1,5 +1,5 @@
 # Created a Redis client for caching and session management.
-from redis import Redis, ConnectionError, TimeoutError
+from redis import Redis
 from app.utils.logger_helper import handle_log
 
 
@@ -8,7 +8,7 @@ redis_client: Redis | None = None  # global client
 
 def init_redis(app):
     """
-    Initialize Redis client (lazy connection).
+    Initialize Redis client (lazy connection)s.
     Does NOT attempt to connect immediately.
     """
     global redis_client

@@ -106,6 +106,7 @@ def test_cache_set_response_error_log_error(patch_redis_client, captured_logs):
     assert log_count["ERROR"]
 
 
+# Unlikely edge case defensive test
 @pytest.mark.parametrize("invalid_key", [{}, [], ()])
 def test_cache_get_data_invalid_key_log_error(
     patch_redis_client, captured_logs, invalid_key: Any
@@ -290,8 +291,9 @@ def test_cache_delete_response_error_log_error(patch_redis_client, captured_logs
     assert log_count["ERROR"]
 
 
+# Unlikely edge case defensive test
 @pytest.mark.parametrize("invalid_key", [{}, [], ()])
-def test_cache_delete_data_error_raises_service_exception(
+def test_cache_delete_invalid_key_log_error(
     patch_redis_client, captured_logs, invalid_key: Any
 ):
 
