@@ -59,7 +59,7 @@ The project follows a **layered, service-oriented architecture**:
 ```
 portfolio-sample-api/
 ├── app/
-│ ├── __init__.py                   # App factory
+│ ├── __init__.py               # App factory
 │ ├── clients/                  # External service & cache clients
 │ │ └── redis_routes.py
 │ ├── exceptions/               # Domain & HTTP exception modeling
