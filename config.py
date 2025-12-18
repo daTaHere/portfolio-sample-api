@@ -42,6 +42,8 @@ class Config:
 
     # Request timeout settings
     REQUEST_TIMEOUT = 10  # seconds
+    REDIS_SOCKET_CONNECT_TIMEOUT = float(os.getenv("REDIS_SOCKET_CONNECT_TIMEOUT", 0.2))
+    REDIS_SOCKET_TIMEOUT = float(os.getenv("REDIS_SOCKET_TIMEOUT", 0.8))
 
 
 class DevelopmentConfig(Config):

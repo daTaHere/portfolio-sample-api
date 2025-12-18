@@ -1,15 +1,17 @@
 """Cache management functions using Redis."""
 
 import json
-from typing import Dict, List
+from typing import Dict
 from redis.exceptions import ConnectionError, TimeoutError, DataError
 from app.clients.redis_client import redis_client
 
-from app.exceptions.base import APIException, ServiceException
-from app.exceptions.exception_handlers import handle_service_error
 from app.utils.logger_helper import handle_log, debug_logger
+from concurrent.futures import ThreadPoolExecutor
+
 
 cache_logger = debug_logger("cache_service")
+executor = ThreadPoolExecutor(max_workers=5)
+CACHE_TIMEOUT_SEC = 0.5  # seconds
 
 
 def cache_set(key: str, value: dict, ttl: int = 10) -> None:
@@ -25,7 +27,12 @@ def cache_set(key: str, value: dict, ttl: int = 10) -> None:
         key=key,
     )
     try:
-        redis_client.set(key, json.dumps(value), ex=ttl)
+        if redis_client is None:
+            return
+
+        future = executor.submit(redis_client.set, key, json.dumps(value), ex=ttl)
+        future.result(timeout=CACHE_TIMEOUT_SEC)
+
         handle_log(
             f"Cache set successfully for key: {key}",
             method="POST",
@@ -34,32 +41,15 @@ def cache_set(key: str, value: dict, ttl: int = 10) -> None:
             service_method="cache_set",
             key=key,
         )
-    except (TypeError, ValueError) as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Failed to serialize value: TypeError or ValueError",
-            log_message="Serialization error in cache_set",
-            exc_type=ServiceException,
-            service_method="cache_set",
+    except Exception as e:
+        handle_log(
+            f"Unable to set cache for key: {key}",
             method="POST",
-        )
-    except DataError as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Failed to set cache: DataError",
-            log_message="Data error in cache_set",
-            exc_type=ServiceException,
+            event_key="ERROR",
+            log_level="error",
             service_method="cache_set",
-            method="POST",
-        )
-    except (ConnectionError, TimeoutError) as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Cache service is unreachable",
-            log_message="Connection error in cache_set",
-            exc_type=APIException,
-            service_method="cache_set",
-            method="POST",
+            key=key,
+            exception=repr(e),
         )
 
 
@@ -67,6 +57,9 @@ def cache_get(key: str) -> Dict | None:
     """
     Retrieve a cache value from Redis by key.
     """
+    cache_logger.debug(
+        f"Line 36: cache_service.cache_get. Retrieving cache for key: {key}"
+    )
     handle_log(
         f"Retrieving cache for key: {key}",
         method="GET",
@@ -77,7 +70,12 @@ def cache_get(key: str) -> Dict | None:
     )
     data = None
     try:
-        is_cached = redis_client.get(key)
+        if redis_client is None:
+            return None
+
+        future = executor.submit(redis_client.get, key)
+        is_cached = future.result(timeout=CACHE_TIMEOUT_SEC)
+
         if is_cached:
             data = json.loads(is_cached)
             handle_log(
@@ -88,32 +86,15 @@ def cache_get(key: str) -> Dict | None:
                 service_method="cache_get",
                 key=key,
             )
-    except DataError as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Failed to get cache: DataError",
-            log_message="Data error in cache_get",
-            exc_type=ServiceException,
-            service_method="cache_get",
-            method="GET",
-        )
-    except (json.JSONDecodeError, TypeError) as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Failed to deserialize value",
-            log_message="Deserialization error in cache_get",
-            exc_type=ServiceException,
-            service_method="cache_get",
-            method="GET",
-        )
-    except (ConnectionError, TimeoutError) as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Cache service is unreachable",
-            log_message="Connection error in cache_get",
-            exc_type=APIException,
-            service_method="cache_get",
-            method="GET",
+    except Exception as e:
+        handle_log(
+            f"Unable to fetch cache for key: {key}",
+            method="POST",
+            event_key="ERROR",
+            log_level="error",
+            service_method="cache_set",
+            key=key,
+            exception=repr(e),
         )
 
     return data
@@ -122,7 +103,6 @@ def cache_get(key: str) -> Dict | None:
 def cache_delete(key: str) -> int:
     """
     Delete a cache value from Redis by key.
-
     """
     handle_log(
         "Attempting to delete cache",
@@ -133,7 +113,11 @@ def cache_delete(key: str) -> int:
         key=key,
     )
     try:
-        is_deleted = redis_client.delete(key)
+        if redis_client is None:
+            return 0
+
+        future = executor.submit(redis_client.delete, key)
+        is_deleted = future.result(timeout=CACHE_TIMEOUT_SEC)
         handle_log(
             (
                 f"Cache deleted successfully for key: {key}"
@@ -146,31 +130,14 @@ def cache_delete(key: str) -> int:
             service_method="cache_delete",
             key=key,
         )
-    except AttributeError as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Failed to delete cache: AttributeError",
-            log_message="Attribute error in cache_delete",
-            exc_type=APIException,
-            service_method="cache_delete",
-            method="DELETE",
-        )
-    except DataError as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Failed to delete cache: DataError",
-            log_message="Data error in cache_delete",
-            exc_type=ServiceException,
-            service_method="cache_delete",
-            method="DELETE",
-        )
-    except (ConnectionError, TimeoutError) as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Cache service is unreachable: ConnectionError or TimeoutError",
-            log_message="Connection error in cache_delete",
-            exc_type=APIException,
-            service_method="cache_delete",
-            method="DELETE",
+    except Exception as e:
+        handle_log(
+            f"Unable to set cache for key: {key}",
+            method="POST",
+            event_key="ERROR",
+            log_level="error",
+            service_method="cache_set",
+            key=key,
+            exception=repr(e),
         )
     return is_deleted
