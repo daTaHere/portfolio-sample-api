@@ -1,8 +1,8 @@
 # Portfolio Sample API
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue)](https://www.python.org/)
-[![Flask](https://img.shields.io/badge/Flask-3.x-black)](https://flask.palletsprojects.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue)](https://www.postgresql.org/)
+[![Flask](https://img.shields.io/badge/Flask-3.x-greenyellow)](https://flask.palletsprojects.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-magenta)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-8+-red)](https://redis.io/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://www.docker.com/)
 [![Pytest](https://img.shields.io/badge/Tests-pytest-green)](https://docs.pytest.org/)
@@ -135,7 +135,7 @@ curl http://localhost:5000/api/feeds
 pytest tests/
 ```
 - Service and route layers tested independently
-- Async external calls mocked with respx
+- Async external calls mocked with `respx`
 - Schema validation asserted in tests
 - Designed for refactor safety
 
@@ -143,10 +143,10 @@ pytest tests/
 ## 🌍 Environment Configuration
 
 ### Supported environments:
-- development – local SQLite
-- testing – in-memory SQLite
-- staging – PostgreSQL
-- production – PostgreSQL
+- `development` – local SQLite
+- `testing` – in-memory SQLite
+- `staging` – PostgreSQL
+- `production` – PostgreSQL
 
 ```bash
 export FLASK_ENV=production
