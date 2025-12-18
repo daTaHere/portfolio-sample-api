@@ -1,14 +1,8 @@
 import pytest
-from typing import Any, Dict, List, Generator
-from unittest.mock import MagicMock, patch
+from typing import List
 from app.models.feed_model import PostWithComments
 from app.services.feeds.feed_validators import check_cache
 
-
-# @pytest.fixture
-# def mock_cache_get() -> Generator[MagicMock, None, None]:
-#     with patch("app.services.feeds.feed_validators.cache_get") as mock:
-#         yield mock  # yields the active mock
 DEFAULT_MOCK_DATA = {
     "start": 1,
     "end": 5,

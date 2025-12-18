@@ -1,274 +1,183 @@
 # Portfolio Sample API
 
-A production-grade Flask backend API built with industry best practices. This application demonstrates a robust Flask architecture with structured logging, database ORM, async task queuing, and comprehensive error handling suitable for medium to large-scale enterprise applications.
+[![Python](https://img.shields.io/badge/Python-3.12+-blue)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-3.x-greenyellow)](https://flask.palletsprojects.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-magenta)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Redis-8+-red)](https://redis.io/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://www.docker.com/)
+[![Pytest](https://img.shields.io/badge/Tests-pytest-green)](https://docs.pytest.org/)
+[![CI](https://github.com/daTaHere/portfolio-samples/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/daTaHere/portfolio-samples/actions/workflows/ci.yml)
 
-## Features
 
-- **RESTful API** with user management endpoints
-- **Production-ready architecture** using Flask app factory pattern
-- **Multiple environment support** (development, staging, production, testing)
-- **Structured logging** with structlog for monitoring and debugging
-- **Database ORM** with SQLAlchemy/Flask-SQLAlchemy
-- **SQLite** for development, **PostgreSQL** for staging/production
-- **CORS support** for cross-origin requests
-- **Async task queue** ready with Celery + Redis
-- **Comprehensive error handling** and validation
-- **Unit testing** with pytest and coverage
-- **WSGI production server** with gunicorn
+A **production-grade Flask backend API** built with industry best practices.  
+This project demonstrates **third-party API integration**, **async service orchestration**, **domain-driven modeling**, and **system optimization via Redis caching**.
 
-## Technology Stack
+The architecture emphasizes **clean separation of concerns**, **structured logging**, **validation-first design**, and **testability**, targeting **medium-to-large scale backend systems**.
 
-- **Python 3.12** - Backend language
-- **Flask** - Lightweight web framework
-- **Flask-CORS** - Handle cross-origin requests
-- **SQLAlchemy / Flask-SQLAlchemy** - ORM for database access
-- **PostgreSQL** - Relational database (production)
-- **SQLite** - Local development database
-- **psycopg2-binary** - PostgreSQL driver
-- **gunicorn** - Production WSGI server
-- **python-dotenv** - Environment variable management
-- **Celery** - Async task queue
-- **Redis** - Broker for Celery tasks
-- **pytest + coverage** - Unit testing and coverage
-- **structlog** - Structured logging for monitoring
+> ⚠️ **Status:** Actively developed. Core architecture and service layer are stable.
 
-## Project Structure
+---
+
+## ✨ Features
+
+- Fully **async service layer** for scalable I/O-bound workloads
+- **Redis-backed caching** with explicit DTO + schema validation
+- **Marshmallow** input/output validation enforcing API contracts
+- **Structured logging** (structlog-style) for observability
+- **SQLAlchemy ORM** with environment-aware database configuration
+- **SQLite** for local development, **PostgreSQL** for staging/production
+- **Docker & Docker Compose** for dev/prod parity
+- **Celery + Redis** ready for background task processing
+- Centralized **exception handling** and error modeling
+- **Unit tests** covering service and route layers with async mocking
+
+---
+
+## ⚙️ Technology Stack
+
+### Core Stack
+| Layer            | Technology                     |
+|------------------|--------------------------------|
+| Language         | Python 3.12                    |
+| Framework        | Flask (Blueprints, App Factory)|
+| Async I/O        | asyncio / httpx                |
+| ORM              | SQLAlchemy / Flask-SQLAlchemy  |
+| Validation       | Marshmallow                    |
+| Caching          | Redis                          |
+| Background Jobs  | Celery + Redis                 |
+| Database         | SQLite (dev), PostgreSQL (prod)|
+| Logging          | structlog                      |
+| Testing          | pytest, respx, coverage        |
+| Containerization | Docker, Docker Compose         |
+
+---
+
+## 🧱 Project Structure
+
+The project follows a **layered, service-oriented architecture**:
 
 ```
 portfolio-sample-api/
 ├── app/
-│   ├── __init__.py           # Flask app factory
-│   ├── routes/
-│   │   ├── __init__.py
-│   │   └── user_routes.py    # User endpoints
-│   ├── models/
-│   │   ├── __init__.py
-│   │   └── user_model.py     # User data model
-│   ├── services/
-│   │   ├── __init__.py
-│   │   └── user_service.py   # Business logic
-│   └── utils/
-│       └── __init__.py
-├── tests/
-│   ├── __init__.py
-│   └── test_user_routes.py   # Unit tests
-├── instance/                  # SQLite database (auto-generated)
-├── config.py                  # Configuration settings
-├── run.py                     # Application entry point
-├── requirements.txt           # Python dependencies
-└── .env.example              # Environment variables template
+│ ├── __init__.py               # App factory
+│ ├── clients/                  # External service & cache clients
+│ │ └── redis_client.py
+│ ├── exceptions/               # Domain & HTTP exception modeling
+│ │ ├── base.py
+│ │ └── exception_handlers.py
+│ ├── schemas/                  # Marshmallow schemas (I/O validation)
+│ ├── models/                   # ORM & domain models
+│ ├── dto/                      # Internal data transfer objects
+│ ├── routes/                   # HTTP layer (Blueprints)
+│ ├── services/                 # Business logic & orchestration
+│ ├── utils/                    # Shared helpers             
+│ |  └── logger_helper.py
+│ ├── logging.py                # Logging configuration
+│
+├── tests/                      # Unit & integration tests
+├── instance/                   # Local SQLite DB (auto-generated)
+├── config.py                   # Environment-based config
+├── run.py                      # Application entry point
+├── requirements.txt
+└── .env.example
 ```
+---
 
-## Getting Started
+### Architectural Rules
+- **Routes** handle HTTP only (no business logic)
+- **Services** orchestrate workflows and domain rules
+- **DTOs** define internal data boundaries
+- **Schemas** validate all inbound and outbound data
+- **Clients** isolate external systems (Redis, APIs)
+
+---
+
+## 🚀 Quickstart
 
 ### Prerequisites
-
 - Python 3.12+
-- pip (Python package manager)
-- (Optional) PostgreSQL for staging/production
-- (Optional) Redis for Celery async tasks
+- pip
+- Docker & Docker Compose (recommended)
+- Redis (for caching / Celery)
 
-### Installation
-
-1. Clone the repository
+### Local Development
+1. Install
 ```bash
 git clone https://github.com/daTaHere/portfolio-sample-api.git
 cd portfolio-sample-api
 ```
-
-2. Create a virtual environment
+2. Setup environment
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies
-```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-4. Set up environment variables
-```bash
 cp .env.example .env
-# Edit .env with your configuration
 ```
-
-### Running the Application
-
-#### Development Mode
-
+3. Run application
 ```bash
 python run.py
 ```
 
-The API will start on `http://localhost:5000`
-
-#### Production Mode with Gunicorn
-
+### Docker (Recommended)
 ```bash
-gunicorn -w 4 -b 0.0.0.0:5000 run:app
+docker compose up -d
 ```
 
-## API Endpoints
-
-### Health Check
-
-```
-GET /health
-```
-
-Returns the health status of the API.
-
-**Response:**
-```json
-{
-  "status": "healthy",
-  "service": "portfolio-sample-api"
-}
-```
-
-### Get All Users
-
-```
-GET /api/users
-```
-
-Retrieves all users from the database.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "name": "John Doe",
-      "created_at": "2024-01-01T12:00:00"
-    }
-  ],
-  "count": 1
-}
-```
-
-### Create User
-
-```
-POST /api/users
-```
-
-Creates a new user.
-
-**Request Body:**
-```json
-{
-  "name": "Jane Smith"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": 2,
-    "name": "Jane Smith"
-  },
-  "message": "User created successfully"
-}
-```
-
-## Testing
-
-Run the test suite:
-
+### Test API
 ```bash
-pytest
+curl http://localhost:5000/api/feeds
 ```
 
-Run with coverage report:
+---
 
+## 🧪 Testing
 ```bash
-pytest --cov=app --cov-report=html
+pytest tests/
 ```
+- Service and route layers tested independently
+- Async external calls mocked with `respx`
+- Schema validation asserted in tests
+- Designed for refactor safety
 
-## Testing with Postman
 
-1. Start the application: `python run.py`
-2. Import the following requests into Postman:
+## 🌍 Environment Configuration
 
-**GET All Users:**
-- Method: GET
-- URL: `http://localhost:5000/api/users`
-
-**Create User:**
-- Method: POST
-- URL: `http://localhost:5000/api/users`
-- Headers: `Content-Type: application/json`
-- Body (raw JSON):
-  ```json
-  {
-    "name": "Test User"
-  }
-  ```
-
-## Environment Configuration
-
-The application supports multiple environments:
-
-- **development** - Local development with SQLite
-- **staging** - Pre-production with PostgreSQL
-- **production** - Production environment with PostgreSQL
-- **testing** - Automated testing with in-memory SQLite
-
-Set the environment using the `FLASK_ENV` variable:
+### Supported environments:
+- `development` – local SQLite
+- `testing` – in-memory SQLite
+- `staging` – PostgreSQL
+- `production` – PostgreSQL
 
 ```bash
 export FLASK_ENV=production
 ```
 
-## Database Setup
+---
 
-### Development (SQLite)
-
-SQLite database is automatically created in the `instance/` directory when you first run the application.
-
-### Production (PostgreSQL)
-
-1. Install PostgreSQL
-2. Create a database
-3. Update `DATABASE_URL` in your `.env` file:
-   ```
-   DATABASE_URL=postgresql://username:password@localhost:5432/database_name
-   ```
-
-## Security Features
-
-- Environment-based configuration management
-- Secure session cookies in production
-- SQL injection prevention via SQLAlchemy ORM
-- Input validation and sanitization
-- Comprehensive error handling
-- Structured logging for audit trails
-
-## Future Enhancements
-
-- Integration with OpenWeather API
-- Integration with JSONPlaceholder API
-- User authentication and authorization
+## 🗺️ Roadmap / Future Enhancements
+- OpenWeather & JSONPlaceholder integrations
+- Cache invalidation strategies & metrics
+- Auth & RBAC
 - Rate limiting
-- API documentation with Swagger/OpenAPI
-- Docker containerization
-- CI/CD pipeline setup
-- Monitoring and alerting integration
+- CI/CD hardening
+- Load testing & benchmarking
+- Production monitoring & alerting
 
-## License
+---
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## 👨‍💻 Author
 
-## Contributing
+**Adam Huynh**  
+[🌐 adamhuynh.dev](https://adamhuynh.dev)  
+Full Stack Engineer  
+React • TypeScript • Python • C# • Flask/Django • ASP.NET Core • SQL • DevOps • Cloud Architecture
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
+---
+
+## 📫 Contact
+
+I’m always open to discussing new opportunities, collaboration, or technical deep dives.
+
+- 🌐 **Portfolio:** [adamhuynh.dev](https://adamhuynh.dev)
+- 💼 **LinkedIn:** [linkedin.com/in/adam-huynh](https://www.linkedin.com/in/adam-huynh-1a241a211)
+- 📧 **Email:** adam@adamhuynh.dev

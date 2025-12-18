@@ -1,15 +1,16 @@
 """Cache management functions using Redis."""
 
 import json
-from typing import Dict, List
-from redis.exceptions import ConnectionError, TimeoutError, DataError
+import os
+from typing import Dict
 from app.clients.redis_client import redis_client
 
-from app.exceptions.base import APIException, ServiceException
-from app.exceptions.exception_handlers import handle_service_error
-from app.utils.logger_helper import handle_log, debug_logger
+from app.utils.logger_helper import handle_log
+from concurrent.futures import ThreadPoolExecutor
 
-cache_logger = debug_logger("cache_service")
+
+executor = ThreadPoolExecutor(max_workers=5)
+CACHE_TIMEOUT_SEC = float(os.getenv("REDIS_SOCKET_TIMEOUT", 0.5))  # seconds
 
 
 def cache_set(key: str, value: dict, ttl: int = 10) -> None:
@@ -20,12 +21,28 @@ def cache_set(key: str, value: dict, ttl: int = 10) -> None:
         f"Setting cache for key: {key}",
         method="POST",
         event_key="CACHE_SET",
-        log_level="debug",
+        log_level="info",
         service_method="cache_set",
         key=key,
     )
+
+    if not redis_client or not key:
+        handle_log(
+            "Failed to set cache: Redis client or key is None",
+            method="POST",
+            event_key="ERROR",
+            log_level="error",
+            service_method="cache_set",
+            key=key,
+            redis_client=redis_client,
+        )
+        return
+
     try:
-        redis_client.set(key, json.dumps(value), ex=ttl)
+
+        future = executor.submit(redis_client.set, key, json.dumps(value), ex=ttl)
+        future.result(timeout=CACHE_TIMEOUT_SEC)
+
         handle_log(
             f"Cache set successfully for key: {key}",
             method="POST",
@@ -34,32 +51,15 @@ def cache_set(key: str, value: dict, ttl: int = 10) -> None:
             service_method="cache_set",
             key=key,
         )
-    except (TypeError, ValueError) as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Failed to serialize value: TypeError or ValueError",
-            log_message="Serialization error in cache_set",
-            exc_type=ServiceException,
-            service_method="cache_set",
+    except Exception as e:
+        handle_log(
+            f"Unable to set cache for key: {key}",
             method="POST",
-        )
-    except DataError as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Failed to set cache: DataError",
-            log_message="Data error in cache_set",
-            exc_type=ServiceException,
+            event_key="ERROR",
+            log_level="error",
             service_method="cache_set",
-            method="POST",
-        )
-    except (ConnectionError, TimeoutError) as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Cache service is unreachable",
-            log_message="Connection error in cache_set",
-            exc_type=APIException,
-            service_method="cache_set",
-            method="POST",
+            key=key,
+            exception=repr(e),
         )
 
 
@@ -71,49 +71,49 @@ def cache_get(key: str) -> Dict | None:
         f"Retrieving cache for key: {key}",
         method="GET",
         event_key="CACHE_GET",
-        log_level="debug",
+        log_level="info",
         service_method="cache_get",
         key=key,
     )
+
+    if not redis_client or not key:
+        handle_log(
+            "Failed to get cache: Redis client or key is None",
+            method="GET",
+            event_key="ERROR",
+            log_level="error",
+            service_method="cache_get",
+            key=key,
+            redis_client=redis_client,
+        )
+        return None
+
     data = None
     try:
-        is_cached = redis_client.get(key)
+        future = executor.submit(redis_client.get, key)
+        is_cached = future.result(timeout=CACHE_TIMEOUT_SEC)
+
         if is_cached:
             data = json.loads(is_cached)
-            handle_log(
-                f"Cache retrieved successfully for key: {key}",
-                method="GET",
-                event_key="SUCCESS",
-                log_level="info",
-                service_method="cache_get",
-                key=key,
-            )
-    except DataError as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Failed to get cache: DataError",
-            log_message="Data error in cache_get",
-            exc_type=ServiceException,
-            service_method="cache_get",
+        handle_log(
+            f"Cache retrieved successfully for key: {key}",
             method="GET",
+            event_key="SUCCESS",
+            log_level="info",
+            service_method="cache_get",
+            key=key,
+            items=len(data) if data else 0,
         )
-    except (json.JSONDecodeError, TypeError) as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Failed to deserialize value",
-            log_message="Deserialization error in cache_get",
-            exc_type=ServiceException,
-            service_method="cache_get",
+
+    except Exception as e:
+        handle_log(
+            f"Unable to fetch cache for key: {key}",
             method="GET",
-        )
-    except (ConnectionError, TimeoutError) as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Cache service is unreachable",
-            log_message="Connection error in cache_get",
-            exc_type=APIException,
+            event_key="ERROR",
+            log_level="error",
             service_method="cache_get",
-            method="GET",
+            key=key,
+            exception=repr(e),
         )
 
     return data
@@ -122,18 +122,33 @@ def cache_get(key: str) -> Dict | None:
 def cache_delete(key: str) -> int:
     """
     Delete a cache value from Redis by key.
-
     """
     handle_log(
         "Attempting to delete cache",
         method="DELETE",
         event_key="CACHE_DELETE",
-        log_level="debug",
+        log_level="info",
         service_method="cache_delete",
         key=key,
     )
+
+    is_deleted = 0
+
+    if not redis_client or not key:
+        handle_log(
+            "Failed to delete cache: Redis client or key is None",
+            method="DELETE",
+            event_key="ERROR",
+            log_level="error",
+            service_method="cache_delete",
+            key=key,
+            redis_client=redis_client,
+        )
+        return is_deleted
+
     try:
-        is_deleted = redis_client.delete(key)
+        future = executor.submit(redis_client.delete, key)
+        is_deleted = future.result(timeout=CACHE_TIMEOUT_SEC)
         handle_log(
             (
                 f"Cache deleted successfully for key: {key}"
@@ -146,31 +161,16 @@ def cache_delete(key: str) -> int:
             service_method="cache_delete",
             key=key,
         )
-    except AttributeError as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Failed to delete cache: AttributeError",
-            log_message="Attribute error in cache_delete",
-            exc_type=APIException,
-            service_method="cache_delete",
+
+    except Exception as e:
+        handle_log(
+            f"Unable to delete cache for key: {key}",
             method="DELETE",
-        )
-    except DataError as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Failed to delete cache: DataError",
-            log_message="Data error in cache_delete",
-            exc_type=ServiceException,
+            event_key="ERROR",
+            log_level="error",
             service_method="cache_delete",
-            method="DELETE",
+            key=key,
+            exception=repr(e),
         )
-    except (ConnectionError, TimeoutError) as e:
-        handle_service_error(
-            exc=e,
-            exc_message="Cache service is unreachable: ConnectionError or TimeoutError",
-            log_message="Connection error in cache_delete",
-            exc_type=APIException,
-            service_method="cache_delete",
-            method="DELETE",
-        )
+
     return is_deleted

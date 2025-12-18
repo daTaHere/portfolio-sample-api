@@ -4,7 +4,7 @@ import pytest
 
 from json import JSONDecodeError
 from typing import Any
-from redis import Redis, ConnectionError, TimeoutError
+from redis import Redis, ResponseError
 from unittest.mock import MagicMock, patch
 
 from tests.utils import count_log_events
@@ -35,7 +35,6 @@ def test_cache_set_and_get_success(patch_redis_client, captured_logs):
     key = DEFAULT_KEY
     value = DEFAULT_VALUE
 
-    # Set and get value
     cache_service.cache_set(key, value, ttl=30)
     log_count = count_log_events(captured_logs, "cache_set")
 
@@ -52,18 +51,21 @@ def test_cache_set_and_get_success(patch_redis_client, captured_logs):
     assert not log_count["ERROR"]
 
 
-def test_cache_set_data_error_raises_service_exception(
-    patch_redis_client, captured_logs
+@pytest.mark.parametrize(
+    "use_client,key",
+    [(False, DEFAULT_KEY), (True, None), (True, "")],
+)
+def test_cache_set_falsy_client_or_key_log_error(
+    monkeypatch, captured_logs, patch_redis_client, use_client, key
 ):
-    key = None
     value = DEFAULT_VALUE
-    # Set and get
-    with pytest.raises(cache_service.ServiceException) as exc_info:
-        cache_service.cache_set(key, value, ttl=30)
+
+    if not use_client:
+        monkeypatch.setattr(cache_service, "redis_client", None)
+
+    cache_service.cache_set(key, value, ttl=30)
     log_count = count_log_events(captured_logs, "cache_set")
 
-    print(exc_info.value)
-    assert "DataError" in str(exc_info.value)
     assert log_count["CACHE_SET"]
     assert not log_count["SUCCESS"]
     assert log_count["ERROR"]
@@ -72,7 +74,7 @@ def test_cache_set_data_error_raises_service_exception(
 @pytest.mark.parametrize(
     "mock_error", [TypeError("forced error"), ValueError("forced error")]
 )
-def test_cache_set_type_and_value_error_raises_service_exception(
+def test_cache_set_type_and_value_exception_log_error(
     patch_redis_client, captured_logs, mock_error: Exception
 ):
     key = DEFAULT_KEY
@@ -80,58 +82,63 @@ def test_cache_set_type_and_value_error_raises_service_exception(
 
     # Mock json.dumps to raise TypeError or ValueError
     with patch("app.services.cache_service.json.dumps", side_effect=mock_error):
-        with pytest.raises(cache_service.ServiceException) as exc_info:
-            cache_service.cache_set(key, value, ttl=30)
-
-    log_count = count_log_events(captured_logs, "cache_set")
-
-    assert "TypeError or ValueError" in str(exc_info.value)
-    assert log_count["CACHE_SET"]
-    assert not log_count["SUCCESS"]
-    assert log_count["ERROR"]
-
-
-@pytest.mark.parametrize(
-    "response_error",
-    [ConnectionError("Connection error"), TimeoutError("Timeout error")],
-)
-def test_cache_set_connection_and_timeout_error_raises_api_exception(
-    patch_redis_client, captured_logs, response_error
-):
-    key = DEFAULT_KEY
-    value = DEFAULT_VALUE
-
-    # Mock Redis set response to raise connection or timeout error
-    patch_redis_client.set = MagicMock(side_effect=response_error)
-    with pytest.raises(cache_service.APIException) as exc_info:
         cache_service.cache_set(key, value, ttl=30)
 
     log_count = count_log_events(captured_logs, "cache_set")
 
-    assert "Cache service is unreachable" in str(exc_info.value)
     assert log_count["CACHE_SET"]
     assert not log_count["SUCCESS"]
     assert log_count["ERROR"]
 
 
-@pytest.mark.parametrize("invalid_key", [None, {}, [], ()])
-def test_cache_get_data_error_raises_service_exception(
+def test_cache_set_response_error_log_error(patch_redis_client, captured_logs):
+    key = DEFAULT_KEY
+    value = DEFAULT_VALUE
+
+    # Mock Redis set to raise ResponseError
+    patch_redis_client.set = MagicMock(side_effect=ResponseError("Response error"))
+    cache_service.cache_set(key, value, ttl=30)
+
+    log_count = count_log_events(captured_logs, "cache_set")
+
+    assert log_count["CACHE_SET"]
+    assert not log_count["SUCCESS"]
+    assert log_count["ERROR"]
+
+
+# Unlikely edge case defensive test
+@pytest.mark.parametrize("invalid_key", [{}, [], ()])
+def test_cache_get_data_invalid_key_log_error(
     patch_redis_client, captured_logs, invalid_key: Any
 ):
 
-    with pytest.raises(cache_service.ServiceException) as exc_info:
-        cache_service.cache_get(invalid_key)
+    cache_service.cache_get(invalid_key)
     log_count = count_log_events(captured_logs, "cache_get")
 
-    assert "DataError" in str(exc_info.value)
     assert log_count["CACHE_GET"]
     assert not log_count["SUCCESS"]
     assert log_count["ERROR"]
 
 
-def test_cache_get_decoder_error_raises_service_exception(
-    patch_redis_client, captured_logs
+@pytest.mark.parametrize(
+    "use_client,key",
+    [(False, DEFAULT_KEY), (True, None), (True, "")],
+)
+def test_cache_get_falsy_client_or_key_log_error(
+    monkeypatch, captured_logs, patch_redis_client, use_client, key
 ):
+    if not use_client:
+        monkeypatch.setattr(cache_service, "redis_client", None)
+
+    cache_service.cache_get(key)
+    log_count = count_log_events(captured_logs, "cache_get")
+
+    assert log_count["CACHE_GET"]
+    assert not log_count["SUCCESS"]
+    assert log_count["ERROR"]
+
+
+def test_cache_get_json_decode_error_log_error(patch_redis_client, captured_logs):
     key = DEFAULT_KEY
     patch_redis_client.get = MagicMock(return_value=DEFAULT_VALUE)
 
@@ -139,34 +146,24 @@ def test_cache_get_decoder_error_raises_service_exception(
         "app.services.cache_service.json.loads",
         side_effect=JSONDecodeError("forced error", "", 0),
     ):
-        with pytest.raises(cache_service.ServiceException) as exc_info:
-            cache_service.cache_get(key)
+        cache_service.cache_get(key)
 
     log_count = count_log_events(captured_logs, "cache_get")
 
-    assert "Failed to deserialize value" in str(exc_info.value)
     assert log_count["CACHE_GET"]
     assert not log_count["SUCCESS"]
     assert log_count["ERROR"]
 
 
-@pytest.mark.parametrize(
-    "response_error",
-    [ConnectionError("Connection error"), TimeoutError("Timeout error")],
-)
-def test_cache_get_connection_and_timeout_error_raises_api_exception(
-    patch_redis_client, captured_logs, response_error
-):
+def test_cache_get_response_error_log_error(patch_redis_client, captured_logs):
     key = DEFAULT_KEY
 
-    # Mock Redis error response to raise connection or timeout error
-    patch_redis_client.get = MagicMock(side_effect=response_error)
-    with pytest.raises(cache_service.APIException) as exc_info:
-        cache_service.cache_get(key)
+    patch_redis_client.get = MagicMock(side_effect=ResponseError("Response error"))
+
+    cache_service.cache_get(key)
 
     log_count = count_log_events(captured_logs, "cache_get")
 
-    assert "Cache service is unreachable" in str(exc_info.value)
     assert log_count["CACHE_GET"]
     assert not log_count["SUCCESS"]
     assert log_count["ERROR"]
@@ -179,7 +176,7 @@ def test_cache_miss_returns_none(patch_redis_client, captured_logs):
 
     assert cached is None
     assert log_count["CACHE_GET"]
-    assert not log_count["SUCCESS"]
+    assert log_count["SUCCESS"]
     assert not log_count["ERROR"]
 
 
@@ -204,9 +201,9 @@ def test_cache_overwrite(patch_redis_client, captured_logs):
     assert not log_get_count["ERROR"]
 
 
-@pytest.mark.parametrize("cache_age,delay_time", [(1, 2.2), (2, 3.2), (5, 6.2)])
+@pytest.mark.parametrize("cache_age,delay_time", [(1, 1.2), (2, 2.2), (3, 3.2)])
 def test_cache_ttl_expiration(
-    patch_redis_client, captured_logs, cache_age: int, delay_time: float
+    patch_redis_client, captured_logs, cache_age: float, delay_time: float
 ):
     key = DEFAULT_KEY
     value = {"expire": True}
@@ -242,6 +239,26 @@ def test_cache_delete_success(patch_redis_client, captured_logs):
     assert not log_count["ERROR"]
 
 
+@pytest.mark.parametrize(
+    "use_client,key",
+    [(False, DEFAULT_KEY), (True, None), (True, "")],
+)
+def test_cache_delete_falsy_client_or_key_log_error(
+    monkeypatch, captured_logs, patch_redis_client, use_client, key
+):
+    value = DEFAULT_VALUE
+
+    if not use_client:
+        monkeypatch.setattr(cache_service, "redis_client", None)
+
+    cache_service.cache_delete(key)
+    log_count = count_log_events(captured_logs, "cache_delete")
+
+    assert log_count["CACHE_DELETE"]
+    assert not log_count["SUCCESS"]
+    assert log_count["ERROR"]
+
+
 def test_cache_delete_nonexistent_key_success(patch_redis_client, captured_logs):
     key = DEFAULT_KEY
     value = DEFAULT_VALUE
@@ -261,56 +278,29 @@ def test_cache_delete_nonexistent_key_success(patch_redis_client, captured_logs)
     assert not log_count["ERROR"]
 
 
-@pytest.mark.parametrize(
-    "response_error",
-    [ConnectionError("Connection error"), TimeoutError("Timeout error")],
-)
-def test_cache_delete_connection_and_timeout_error_raises_api_exception(
-    patch_redis_client, captured_logs, response_error: Exception
-):
+def test_cache_delete_response_error_log_error(patch_redis_client, captured_logs):
     key = DEFAULT_KEY
-    patch_redis_client.delete = MagicMock(side_effect=response_error)
+    patch_redis_client.delete = MagicMock(side_effect=ResponseError("Response error"))
 
-    with pytest.raises(cache_service.APIException) as exc_info:
-        cache_service.cache_delete(key)
+    cache_service.cache_delete(key)
 
     log_count = count_log_events(captured_logs, "cache_delete")
 
-    assert "ConnectionError or TimeoutError" in str(exc_info.value)
     assert log_count["CACHE_DELETE"]
     assert not log_count["SUCCESS"]
     assert log_count["ERROR"]
 
 
-@pytest.mark.parametrize("invalid_key", [None, {}, [], ()])
-def test_cache_delete_data_error_raises_service_exception(
+# Unlikely edge case defensive test
+@pytest.mark.parametrize("invalid_key", [{}, [], ()])
+def test_cache_delete_invalid_key_log_error(
     patch_redis_client, captured_logs, invalid_key: Any
 ):
-    with pytest.raises(cache_service.ServiceException) as exc_info:
-        cache_service.cache_delete(invalid_key)
+
+    cache_service.cache_delete(invalid_key)
 
     log_count = count_log_events(captured_logs, "cache_delete")
 
-    assert "DataError" in str(exc_info.value)
-    assert log_count["CACHE_DELETE"]
-    assert not log_count["SUCCESS"]
-    assert log_count["ERROR"]
-
-
-def test_cache_delete_attribute_error_raises_api_exception(
-    patch_redis_client, captured_logs
-):
-    key = DEFAULT_KEY
-    with patch(
-        "app.services.cache_service.redis_client.delete",
-        side_effect=AttributeError("forced error"),
-    ):
-        with pytest.raises(cache_service.APIException) as exc_info:
-            cache_service.cache_delete(key)
-
-    log_count = count_log_events(captured_logs, "cache_delete")
-
-    assert "AttributeError" in str(exc_info.value)
     assert log_count["CACHE_DELETE"]
     assert not log_count["SUCCESS"]
     assert log_count["ERROR"]
