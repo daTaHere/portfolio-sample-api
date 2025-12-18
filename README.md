@@ -115,7 +115,7 @@ cp .env.example .env
 ```
 3. Run application
 ```bash
-flask run.py
+python run.py
 ```
 
 ### Docker (Recommended)

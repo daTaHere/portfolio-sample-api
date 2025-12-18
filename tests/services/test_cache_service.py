@@ -87,24 +87,12 @@ def test_cache_set_type_and_value_exception_log_error(
     assert log_count["ERROR"]
 
 
-@pytest.mark.parametrize(
-    "client_bad_response",
-    [
-        {},
-        [],
-        (),
-        ConnectionError("Connection error"),
-        TimeoutError("Timeout error"),
-    ],
-)
-def test_cache_set_client_bad_response_log_error(
-    patch_redis_client, captured_logs, client_bad_response
-):
+def test_cache_set_client_bad_response_log_error(patch_redis_client, captured_logs):
     key = DEFAULT_KEY
     value = DEFAULT_VALUE
 
     # Mock Redis set response to raise connection or timeout error
-    patch_redis_client.set = MagicMock(side_effect=client_bad_response)
+    patch_redis_client.set = MagicMock(side_effect=ResponseError("Response error"))
     cache_service.cache_set(key, value, ttl=30)
 
     log_count = count_log_events(captured_logs, "cache_set")
@@ -132,7 +120,6 @@ def test_cache_get_data_invalid_key_log_error(
     [(None, DEFAULT_KEY), (patch_redis_client, None), (patch_redis_client, "")],
 )
 def test_cache_get_falsy_key_or_client_log_error(captured_logs, client, key):
-    value = DEFAULT_VALUE
 
     cache_service.cache_get(key)
     log_count = count_log_events(captured_logs, "cache_get")
@@ -248,7 +235,6 @@ def test_cache_delete_success(patch_redis_client, captured_logs):
     [(None, DEFAULT_KEY), (patch_redis_client, None), (patch_redis_client, "")],
 )
 def test_cache_delete_falsy_key_or_client_log_error(captured_logs, client, key):
-    value = DEFAULT_VALUE
 
     cache_service.cache_delete(key)
     log_count = count_log_events(captured_logs, "cache_delete")

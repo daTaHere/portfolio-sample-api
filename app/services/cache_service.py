@@ -132,6 +132,8 @@ def cache_delete(key: str) -> int:
         key=key,
     )
 
+    is_deleted = 0
+
     if not redis_client or not key:
         handle_log(
             "Failed to delete cache: Redis client or key is None",
@@ -142,7 +144,7 @@ def cache_delete(key: str) -> int:
             key=key,
             redis_client=redis_client,
         )
-        return 0
+        return is_deleted
 
     try:
         future = executor.submit(redis_client.delete, key)
@@ -160,7 +162,6 @@ def cache_delete(key: str) -> int:
             key=key,
         )
 
-        return is_deleted
     except Exception as e:
         handle_log(
             f"Unable to delete cache for key: {key}",
@@ -171,3 +172,5 @@ def cache_delete(key: str) -> int:
             key=key,
             exception=repr(e),
         )
+
+    return is_deleted
