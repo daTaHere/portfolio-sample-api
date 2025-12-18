@@ -61,7 +61,7 @@ portfolio-sample-api/
 ├── app/
 │ ├── __init__.py               # App factory
 │ ├── clients/                  # External service & cache clients
-│ │ └── redis_routes.py
+│ │ └── redis_client.py
 │ ├── exceptions/               # Domain & HTTP exception modeling
 │ │ ├── base.py
 │ │ └── exception_handlers.py

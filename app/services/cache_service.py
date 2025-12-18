@@ -1,16 +1,16 @@
 """Cache management functions using Redis."""
 
 import json
+import os
 from typing import Dict
 from app.clients.redis_client import redis_client
 
-from app.utils.logger_helper import handle_log, debug_logger
+from app.utils.logger_helper import handle_log
 from concurrent.futures import ThreadPoolExecutor
 
 
-cache_logger = debug_logger("cache_service")
 executor = ThreadPoolExecutor(max_workers=5)
-CACHE_TIMEOUT_SEC = 0.5  # seconds
+CACHE_TIMEOUT_SEC = float(os.getenv("REDIS_SOCKET_TIMEOUT", 0.5))  # seconds
 
 
 def cache_set(key: str, value: dict, ttl: int = 10) -> None:
