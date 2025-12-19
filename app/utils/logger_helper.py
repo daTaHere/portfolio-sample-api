@@ -22,7 +22,7 @@ def debug_logger(name: str, level=logging.DEBUG):
         name (str): The name of the logger.
         level (int): The logging level (default: logging.DEBUG).
     """
-    # Overide default logger configuration to create isolated logger and emit level
+    # Override default logger configuration to create isolated logger and emit level
     py_logger = logging.getLogger(name)
     py_logger.setLevel(level)
 

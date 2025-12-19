@@ -9,7 +9,7 @@ from app.models.user_model import User
 from typing import List, Optional
 
 """
-Main User service layer  orchestrator and for user operations.
+Main User service layer orchestrator for user operations.
 Future enhancements may include input validation, exception handling, and logging.
 """
 

@@ -1,5 +1,5 @@
 """
-create_mdel_list comprehensive unit tests.
+create_model_list comprehensive unit tests.
 Tests for the create_model_list function in feed_builders.py.
 Covers:
 - Successful creation of Post and Comment model lists.

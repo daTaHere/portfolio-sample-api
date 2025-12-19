@@ -13,7 +13,7 @@ from app import create_app, db
 from app.models.user_model import User
 
 """
-User Routes test schafold with pytest fixtures and test cases for user-related endpoints.
+User Routes test scaffold with pytest fixtures and test cases for user-related endpoints.
 Enhancements may include more detailed test cases and edge case handling.
 """
 

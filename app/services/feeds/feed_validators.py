@@ -13,8 +13,8 @@ JSONPLACEHOLDER_BASE_URL = "https://jsonplaceholder.typicode.com"
 
 async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]]:
     """
-    Construct endpoint URL for prefetching data from JSONPlaceholder API,
-    send the request, validate the response, cache the data, and return the list of items.
+    Construct the endpoint URL for prefetching data from the JSONPlaceholder API,
+    send the request, validate the response, and return the list of items.
     """
     prefetch_limit = limit * 2
     url = (

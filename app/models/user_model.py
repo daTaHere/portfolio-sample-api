@@ -19,7 +19,7 @@ class User(db.Model):
     def __repr__(self):
         return f"<User {self.id}: {self.name}>"
 
-    # This method will be replaced with marshmallow schema for serialization
+    # This method will be replaced with Marshmallow schema for serialization
     def to_dict(self):
         """Convert User object to dictionary for JSON serialization."""
         return {

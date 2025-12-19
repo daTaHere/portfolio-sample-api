@@ -77,7 +77,7 @@ class StagingConfig(Config):
 class ProductionConfig(Config):
     """Production environment configuration."""
 
-    # Flask setting
+    # Flask settings
     DEBUG = False
     TESTING = False
 

@@ -5,7 +5,7 @@ Covers:
 - Successful data retrieval with various parameters.
 - Handling of TypeError and ValueError during data processing.
 - Response count with boundaries, mismatches, and empty responses.
-- Assertion of correct enpoint URL construction.
+- Assertion of correct endpoint URL construction.
 - Edge cases and exception handling.
 """
 
