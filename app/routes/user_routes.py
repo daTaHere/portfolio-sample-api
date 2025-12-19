@@ -12,8 +12,8 @@ user_bp = Blueprint("users", __name__)
 
 """
 User Routes is a scaffold for user-related endpoints.
-Future endpoints for user management will be added here.
-Including appropriate exception handling and logging.
+Future endpoints for user management will be added here,
+including appropriate exception handling and logging.
 (e.g., update user, delete user, get user by ID).
 """
 
@@ -21,7 +21,7 @@ Including appropriate exception handling and logging.
 @user_bp.route("/users", methods=["GET"])
 def get_users():
     """
-    Fetch request return all users.
+    Fetch request returns all users.
     """
     try:
         users = get_all_users()

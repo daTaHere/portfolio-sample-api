@@ -77,7 +77,7 @@ def check_cache(
     cache_data: Dict[str, Any], start: int, limit: int
 ) -> List[Dict[str, Any]] | None:
     """
-    On cache hit, this function ensure range requested is within cached data bounds
+    On cache hit, this function ensures the range requested is within cached data bounds
     and returns the appropriate subset of cached data.
     Otherwise, returns None to indicate a cache miss.
     """

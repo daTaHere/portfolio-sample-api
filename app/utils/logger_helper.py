@@ -22,7 +22,7 @@ def debug_logger(name: str, level=logging.DEBUG):
         name (str): The name of the logger.
         level (int): The logging level (default: logging.DEBUG).
     """
-    # Override default logger configuration to create isolated logger and emit level
+    # Override default logger configuration to create an isolated logger and set its logging level
     py_logger = logging.getLogger(name)
     py_logger.setLevel(level)
 
@@ -44,7 +44,7 @@ def handle_log(
     service_method: str,
     **extra: Any,
 ) -> None:
-    """Helper function returns a structured log with dynamic log level."""
+    """Log a structured message with a dynamic log level."""
 
     if log_level not in allowed_log_levels:  # Ensure valid log level
         raise ValueError(

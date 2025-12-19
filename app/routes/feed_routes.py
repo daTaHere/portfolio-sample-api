@@ -1,6 +1,6 @@
 """
-This module defines the feed-related routes layer endpoints for the Flask application.
-Routes are fully asynchronous implementation with 3rd party API integration, caching, logging, and error handling.
+This module defines the feed-related route layer endpoints for the Flask application.
+Routes are a fully asynchronous implementation with 3rd party API integration, caching, logging, and error handling.
 
 """
 

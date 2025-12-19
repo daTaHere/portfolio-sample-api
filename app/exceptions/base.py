@@ -1,4 +1,4 @@
-"""This module defines base exceptions class for the application."""
+"""This module defines base exception classes for the application."""
 
 
 class APIException(Exception):

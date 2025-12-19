@@ -1,5 +1,5 @@
 """
-send_request function comprehensive unit tests.
+Comprehensive unit tests for the send_request function.
 Tests for the send_request function in feed_fetchers.py.
 Covers:
 - Successful data retrieval.

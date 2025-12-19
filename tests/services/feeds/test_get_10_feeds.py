@@ -1,5 +1,5 @@
 """
-get_10_feeds service comprehensive unit tests.
+Comprehensive unit tests for the get_10_feeds service.
 Tests for the get_10_feeds function in feed_service.py.
 Covers:
 - Successful data retrieval with and without cache.
