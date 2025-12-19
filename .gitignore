@@ -1,5 +1,5 @@
 ### Python ###
-__pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 
@@ -24,7 +24,7 @@ coverage.xml
 .pytest_cache/
 
 ### Flask ###
-instance/
+instance/**
 .webassets-cache
 
 ### Celery ###
