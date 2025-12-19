@@ -1,3 +1,13 @@
+"""
+send_request function comprehensive unit tests.
+Tests for the send_request function in feed_fetchers.py.
+Covers:
+- Successful data retrieval.
+- Handling transport layer errors with retries.
+- Correct exception raising for various failure scenarios.
+- Asynchronous HTTP request mocking with respx.
+"""
+
 import pytest
 import respx
 import httpx

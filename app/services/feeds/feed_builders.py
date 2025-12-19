@@ -2,18 +2,18 @@
 
 from typing import Any, Dict, List, Type, TypeVar
 
+from app.models import Post, Comment
 from app.exceptions.base import ServiceException
 from app.exceptions.exception_handlers import handle_service_error
 from app.utils.logger_helper import handle_log
 
-from app.models import Post, Comment
 
 T = TypeVar("T", bound=Post | Comment)
 
 
 def create_model_list(input_data: List[Dict[str, Any]], model: Type[T]) -> List[T]:
     """
-    Instantiate Post or Comment objects from raw data.
+    Instantiate Post or Comment objects from raw data and return a list of model instances.
     """
     try:
         handle_log(

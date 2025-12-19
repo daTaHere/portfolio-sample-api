@@ -1,3 +1,5 @@
+"""This module provides utility functions for handling route layer responses."""
+
 from flask import jsonify
 from typing import Any
 

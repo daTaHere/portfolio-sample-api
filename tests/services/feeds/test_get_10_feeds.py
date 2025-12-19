@@ -1,3 +1,14 @@
+"""
+get_10_feeds service comprehensive unit tests.
+Tests for the get_10_feeds function in feed_service.py.
+Covers:
+- Successful data retrieval with and without cache.
+- Handling of ValidationError during cache loading.
+- Handling of custom and generic exceptions.
+- Edge cases for input validation.
+- Cache hit, miss, connection errors, and fallbacks behavior.
+"""
+
 import pytest
 from marshmallow import ValidationError
 from unittest.mock import AsyncMock, MagicMock, patch

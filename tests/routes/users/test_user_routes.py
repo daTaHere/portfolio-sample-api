@@ -1,22 +1,28 @@
 """
 Unit tests for user service and routes.
 """
+
 import pytest
 import sys
 import os
 
 # Add project root to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app import create_app, db
 from app.models.user_model import User
+
+"""
+User Routes test schafold with pytest fixtures and test cases for user-related endpoints.
+Enhancements may include more detailed test cases and edge case handling.
+"""
 
 
 @pytest.fixture
 def app():
     """Create and configure a test application instance."""
-    app = create_app('testing')
-    
+    app = create_app("testing")
+
     with app.app_context():
         db.create_all()
         yield app
@@ -32,58 +38,58 @@ def client(app):
 
 def test_health_check(client):
     """Test health check endpoint."""
-    response = client.get('/health')
+    response = client.get("/health")
     assert response.status_code == 200
     data = response.get_json()
-    assert data['status'] == 'healthy'
+    assert data["status"] == "healthy"
 
 
 def test_get_users_empty(client):
     """Test GET /api/users with empty database."""
-    response = client.get('/api/users')
+    response = client.get("/api/users")
     assert response.status_code == 200
     data = response.get_json()
-    assert data['success'] is True
-    assert data['count'] == 0
-    assert data['data'] == []
+    assert data["success"] is True
+    assert data["count"] == 0
+    assert data["data"] == []
 
 
 def test_create_user(client):
     """Test POST /api/users to create a new user."""
-    response = client.post('/api/users', json={'name': 'John Doe'})
+    response = client.post("/api/users", json={"name": "John Doe"})
     assert response.status_code == 201
     data = response.get_json()
-    assert data['success'] is True
-    assert data['data']['name'] == 'John Doe'
-    assert 'id' in data['data']
+    assert data["success"] is True
+    assert data["data"]["name"] == "John Doe"
+    assert "id" in data["data"]
 
 
 def test_create_user_without_name(client):
     """Test POST /api/users without name field."""
-    response = client.post('/api/users', json={})
+    response = client.post("/api/users", json={})
     assert response.status_code == 400
     data = response.get_json()
-    assert data['success'] is False
+    assert data["success"] is False
 
 
 def test_create_user_with_empty_name(client):
     """Test POST /api/users with empty name."""
-    response = client.post('/api/users', json={'name': ''})
+    response = client.post("/api/users", json={"name": ""})
     assert response.status_code == 400
     data = response.get_json()
-    assert data['success'] is False
+    assert data["success"] is False
 
 
 def test_get_users_after_creation(client):
     """Test GET /api/users after creating users."""
     # Create two users
-    client.post('/api/users', json={'name': 'Alice'})
-    client.post('/api/users', json={'name': 'Bob'})
-    
+    client.post("/api/users", json={"name": "Alice"})
+    client.post("/api/users", json={"name": "Bob"})
+
     # Get all users
-    response = client.get('/api/users')
+    response = client.get("/api/users")
     assert response.status_code == 200
     data = response.get_json()
-    assert data['success'] is True
-    assert data['count'] == 2
-    assert len(data['data']) == 2
+    assert data["success"] is True
+    assert data["count"] == 2
+    assert len(data["data"]) == 2

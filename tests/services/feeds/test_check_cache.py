@@ -1,3 +1,10 @@
+"""
+check_cache helpers unit tests.
+Covers:
+- Valid cache hits within range.
+- Cache misses when requested range is out of bounds.
+"""
+
 import pytest
 from typing import List
 from app.models.feed_model import PostWithComments

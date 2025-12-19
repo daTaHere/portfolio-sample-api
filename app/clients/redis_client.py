@@ -1,15 +1,18 @@
-# Created a Redis client for caching and session management.
+"""
+This module initializes a Redis client singleton for caching purposes.
+
+"""
+
 from redis import Redis
 from app.utils.logger_helper import handle_log
 
 
-redis_client: Redis | None = None  # global client
+redis_client: Redis | None = None
 
 
 def init_redis(app):
     """
-    Initialize Redis client (lazy connection)s.
-    Does NOT attempt to connect immediately.
+    Initialize Redis client (lazy connection).
     """
     global redis_client
     try:
@@ -23,7 +26,6 @@ def init_redis(app):
             retry_on_timeout=False,  # fail fast
             health_check_interval=0,  # optional, prevents background pings
         )
-        # Do NOT call ping() or any command here — this is lazy
         handle_log(
             "Redis client initialized (lazy connection)",
             log_level="info",
@@ -31,7 +33,6 @@ def init_redis(app):
             service_method="init_redis",
         )
     except Exception as e:
-        # Defensive catch — should never happen during lazy init
         handle_log(
             f"Unexpected error initializing Redis client: {e}",
             log_level="error",

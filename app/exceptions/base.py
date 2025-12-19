@@ -1,4 +1,4 @@
-# app/exceptions/base_exceptions.py
+"""This module defines base exceptions class for the application."""
 
 
 class APIException(Exception):
