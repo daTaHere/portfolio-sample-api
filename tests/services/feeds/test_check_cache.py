@@ -9,6 +9,7 @@ import pytest
 from typing import List
 from app.models.feed_model import PostWithComments
 from app.services.feeds.feed_validators import check_cache
+from tests.utils import count_log_events
 
 DEFAULT_MOCK_DATA = {
     "start": 1,
@@ -97,8 +98,13 @@ def test_check_cache_success(data: List[PostWithComments], start: int, limit: in
         ),
     ],
 )
-def test_check_cache_out_of_range(data: List[PostWithComments], start: int, limit: int):
+def test_check_cache_out_of_range(
+    data: List[PostWithComments], start: int, limit: int, captured_logs
+):
 
-    result = check_cache(data, start=start, limit=limit)
+    with pytest.raises(ValueError) as exc_info:
+        check_cache(data, start=start, limit=limit)
+    log_counts = count_log_events(captured_logs, "check_cache")
 
-    assert result is None
+    assert log_counts["CACHE_RANGE_ERROR"]
+    assert "Requested range out of bounds" in str(exc_info.value)
