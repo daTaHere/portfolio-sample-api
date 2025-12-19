@@ -1,4 +1,4 @@
-"""Schemas for serializing and deserializing feed-related data."""
+"""This module defines schemas for validating and (de)serializing feed-related data."""
 
 from marshmallow import Schema, fields
 

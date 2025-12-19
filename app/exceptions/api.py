@@ -1,4 +1,4 @@
-# app/exceptions/service_exceptions.py
+"""This module defines custom exceptions for transport layer errors."""
 
 
 class APIException(Exception):

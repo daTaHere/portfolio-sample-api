@@ -1,3 +1,5 @@
+"""This module defines helper functions for handling exceptions consistently."""
+
 from app.logging import logger
 from typing import Any, Optional, Type
 

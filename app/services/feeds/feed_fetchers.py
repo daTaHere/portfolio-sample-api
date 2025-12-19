@@ -5,15 +5,11 @@ import asyncio
 
 from typing import Any, Dict, List
 
-from app.exceptions.base import (
-    APIException,
-    ServiceException,
-)
-
+from app.exceptions.base import APIException, ServiceException
 from app.exceptions.exception_handlers import handle_service_error
+
 from app.utils.logger_helper import handle_log
 from app.schemas import PostSchema, CommentSchema
-
 from marshmallow import ValidationError
 
 
@@ -27,13 +23,14 @@ COMMENT_SCHEMA = CommentSchema(many=True)
 
 async def send_request(endpoint: str) -> List[Dict[str, Any]]:
     """
-    Send HTTP request to 3rd party API and return JSON list.
-    Handles network, HTTP status, and JSON decoding errors.
+    Fetch data from JSONPlaceholder API with retries, timeouts, and validation.
+    Returns a list of posts or comments to build feeds.
     """
     url = endpoint
     validator = POST_SCHEMA if POST_ENDPOINT in endpoint else COMMENT_SCHEMA
     data = None
 
+    # Retry loop for handling transient errors
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             handle_log(

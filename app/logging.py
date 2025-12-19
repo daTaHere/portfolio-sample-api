@@ -1,17 +1,13 @@
 import structlog
 
 """
-Logging configuration for the application using structlog for structured logging.
-Sets up a logger with JSON output format and various processors for enhanced log information.
-Logs include timestamps, log levels, and exception information.
-Logging centered around structured events for better traceability and analysis.
-
-To use the logger in other modules, import it from this file:
-from app.logging import logger
+This module configure structlog for structured logging across the application.
+It sets up processors to format logs in JSON with timestamps, log levels, and other useful metadata.
+It initializes a logger singleton instance for use throughout the app.
 """
 
 
-# Configure structured logging
+# Configure structlog for structured logging
 structlog.configure(
     processors=[
         structlog.stdlib.filter_by_level,

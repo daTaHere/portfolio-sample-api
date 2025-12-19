@@ -1,21 +1,20 @@
 from typing import Any, Dict, List
 
+from app.services.feeds.feed_fetchers import send_request
+
 from app.exceptions.base import ServiceException
 from app.exceptions.exception_handlers import raise_error
+
 from app.utils.logger_helper import handle_log
 
-from app.services.feeds.feed_fetchers import send_request
-from app.services.cache_service import cache_get
-
-from app.dto.feeds.feed_cache_schema import FeedCacheSchema
 
 JSONPLACEHOLDER_BASE_URL = "https://jsonplaceholder.typicode.com"
 
 
 async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]]:
     """
-    Fetch records from a specific endpoint and return as list of dicts.
-    Handles URL construction, logging, and response validation.
+    Construct the endpoint URL for prefetching data from the JSONPlaceholder API,
+    send the request, validate the response, and return the list of items.
     """
     prefetch_limit = limit * 2
     url = (
@@ -51,7 +50,7 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
             model=endpoint.upper(),
             received_type=type(data).__name__,
         )
-    if len(data) > prefetch_limit:
+    if len(data) > prefetch_limit:  # guard against unexpected large queries
         raise_error(
             f"Internal Server Error Received: {len(data)} items, Expected: up to {prefetch_limit} items.",
             f"Response item count mismatch",
@@ -78,15 +77,14 @@ def check_cache(
     cache_data: Dict[str, Any], start: int, limit: int
 ) -> List[Dict[str, Any]] | None:
     """
-    Check if prefetched data is available in cache and
-    if the requested range is within the cached range.
+    On cache hit, this function ensures the range requested is within cached data bounds
+    and returns the appropriate subset of cached data.
+    Otherwise, returns None to indicate a cache miss.
     """
 
     cached_subset: List[Dict[str, Any]] | None = None
-
-    _start, _end, _data = (
-        cache_data.values()
-    )  # make a schema or class for feed cache object
+    # Unpack cached data from schema dto
+    _start, _end, _data = cache_data.values()
 
     if start >= _start and (start + limit - 1) <= _end:
         offset = start - _start

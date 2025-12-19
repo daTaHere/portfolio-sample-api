@@ -1,3 +1,12 @@
+"""
+Comprehensive unit tests for create_model_list.
+Tests for the create_model_list function in feed_builders.py.
+Covers:
+- Successful creation of Post and Comment model lists.
+- Handling of TypeError and ValueError during model instantiation.
+- Edge cases such as empty input data.
+"""
+
 import pytest
 
 from unittest.mock import patch

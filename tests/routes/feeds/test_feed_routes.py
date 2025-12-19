@@ -1,5 +1,10 @@
 """
-Unit tests for feed routes.
+Comprehensive unit tests for Feed Routes.
+Tests for the /api/feeds endpoint covering success and error scenarios.
+Covers:
+- Successful data retrieval with various parameters.
+- Handling of APIException, ServiceException, TypeError, ValueError, and generic Exception.
+- Edge cases for input validation.
 """
 
 import pytest

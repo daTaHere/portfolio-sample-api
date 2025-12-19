@@ -7,24 +7,22 @@ import asyncio
 
 from collections import defaultdict
 from typing import Any, Dict, List
-
 from marshmallow import ValidationError
-
-from app.logging import logger
-from app.utils.logger_helper import handle_log, debug_logger
 
 from app.models import Post, Comment, PostWithComments
 from app.schemas.feed_schemas import PostWithCommentsSchema
-
 from app.dto.feeds.feed_cache_dto import FeedCache
 from app.dto.feeds.feed_cache_schema import FeedCacheSchema
-
-from app.exceptions.base import ServiceException
-from app.exceptions.exception_handlers import handle_service_error
 
 from app.services.feeds.feed_builders import create_model_list
 from app.services.feeds.feed_validators import get_data, check_cache
 from app.services.cache_service import cache_get, cache_set
+
+from app.exceptions.base import ServiceException
+from app.exceptions.exception_handlers import handle_service_error
+
+from app.logging import logger
+from app.utils.logger_helper import handle_log, debug_logger
 
 
 POST_ENDPOINT = "posts"
@@ -36,8 +34,10 @@ feeds_schema = PostWithCommentsSchema(many=True)
 
 async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments]:
     """
-    Orchestrates fetching posts and comments, builds feed objects.
+    Main feed service function to get posts with comments.
+    Orchestrates data fetching, model creation, caching, and error handling.
     """
+
     if start < 0 or limit <= 0 or limit > 100:
         handle_log(
             f"Invalid start or limit values. Start: {start}, Limit: {limit}",
@@ -54,6 +54,7 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
     comments_by_post: Dict[int, List[Comment]] = defaultdict(list)
     feeds: List[PostWithComments] | List[Dict[str, Any]] = []
 
+    # Check cache first
     cache_hit = cache_get("feeds")
     if cache_hit:
         feed_logger.debug(
@@ -107,6 +108,7 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
             model="PostWithComments",
         )
 
+    # Fallthrough: Fetch data and build feeds
     posts_coro = get_data(POST_ENDPOINT, start, limit)
     comments_coro = get_data(COMMENT_ENDPOINT, start, limit)
     post_data, comment_data = await asyncio.gather(posts_coro, comments_coro)
@@ -141,6 +143,7 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
 
         cache_model = FeedCache(start=start, feeds=feed_data)
         cache_data = FeedCacheSchema().dump(cache_model)
+        # Cache for 10 seconds
         cache_set("feeds", cache_data, 10)
 
         feeds = feed_data[:limit]

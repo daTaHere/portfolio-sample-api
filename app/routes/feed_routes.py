@@ -1,3 +1,9 @@
+"""
+This module defines the feed-related route layer endpoints for the Flask application.
+Routes are a fully asynchronous implementation with 3rd party API integration, caching, logging, and error handling.
+
+"""
+
 from flask import Blueprint, request
 
 from app.services.feeds.feed_service import get_10_feeds
@@ -5,16 +11,24 @@ from app.schemas.feed_schemas import PostWithCommentsSchema
 
 from app.exceptions.base import APIException, ServiceException
 from app.exceptions.exception_handlers import handle_route_error
+
 from app.utils.route_utils import handle_route_response
 from app.utils.logger_helper import handle_log
 
-from app.services.cache_service import cache_get, cache_set
 
 feed_bp = Blueprint("feeds", __name__)
 
 
 @feed_bp.route("/feeds", methods=["GET"])
 async def get_feeds():
+    """
+    This GET endpoint retrieves a list of feed posts with their associated comments.
+    Query Parameters (optional):
+        - start (int): The starting index for pagination. (default is 0)
+        - limit (int): The number of posts to retrieve. (default is 10)
+    Returns:
+        JSON: Array of feed posts with comments and 200 status
+    """
     handle_log(
         "GET /feeds request received",
         method="GET",
@@ -25,6 +39,7 @@ async def get_feeds():
 
     try:
         if not request.args:
+            # No query parameters, use defaults
             res = await get_10_feeds()
         else:
             start = int(request.args.get("start"))
@@ -73,19 +88,3 @@ async def get_feeds():
         items=len(data),
     )
     return handle_route_response(True, data, 200)
-
-
-@feed_bp.route("/cache-test", methods=["GET"])
-def test_cache():
-    key = "test:key"
-    test_value = {"foo": "bar"}
-
-    # Try retrieving existing
-    cached = cache_get(key)
-
-    if cached:
-        return handle_route_response(True, cached, 200)
-
-    # Otherwise set it
-    cache_set(key, test_value, ttl=30)
-    return handle_route_response(True, "set", 200)
