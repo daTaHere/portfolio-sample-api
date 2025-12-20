@@ -21,8 +21,7 @@ from app.exceptions.base import ServiceException
 from app.exceptions.exception_handlers import handle_service_error
 
 from app.logging import logger
-from app.utils.logger_helper import handle_log, debug_logger
-
+from app.utils.logger_helper import handle_log
 
 POST_ENDPOINT = "posts"
 COMMENT_ENDPOINT = "comments"
