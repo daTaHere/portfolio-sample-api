@@ -1,0 +1,250 @@
+"""
+Comprehensive unit tests for Feed Routes.
+Tests for the /api/feeds endpoint covering success and error scenarios.
+Covers:
+- Successful data retrieval with various parameters.
+- Handling of APIException, ServiceException, TypeError, ValueError, and generic Exception.
+- Edge cases for input validation.
+"""
+
+import pytest
+import asyncio
+
+from unittest.mock import AsyncMock, patch
+from typing import Any, List, Dict
+from tests.utils import count_log_events
+
+from app.routes.feed_routes import get_feeds
+from app.exceptions.base import APIException, ServiceException
+
+
+@pytest.fixture
+def mock_get_10_feeds():
+    """Fixture to mock get_10_feeds service method."""
+    with patch(
+        "app.routes.feed_routes.get_10_feeds",
+        new_callable=AsyncMock,
+    ) as mock_service:
+        yield mock_service
+
+
+@pytest.mark.parametrize(
+    "test_data,params,count",
+    [
+        (
+            [
+                {
+                    "body": "quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto",
+                    "comments": [
+                        {
+                            "body": "laudantium enim quasi est quidem magnam voluptate ipsam eos\ntempora quo necessitatibus\ndolor quam autem quasi\nreiciendis et nam sapiente accusantium",
+                            "email": "Eliseo@gardner.biz",
+                            "id": 1,
+                            "name": "id labore ex et quam laborum",
+                        }
+                    ],
+                    "id": 1,
+                    "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+                }
+            ],
+            "?start=0&limit=1",
+            1,
+        ),
+        (
+            [
+                {
+                    "body": "quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto",
+                    "comments": [
+                        {
+                            "body": "laudantium enim quasi est quidem magnam voluptate ipsam eos\ntempora quo necessitatibus\ndolor quam autem quasi\nreiciendis et nam sapiente accusantium",
+                            "email": "Eliseo@gardner.biz",
+                            "id": 1,
+                            "name": "id labore ex et quam laborum",
+                        },
+                        {
+                            "body": "est natus enim nihil est dolore omnis voluptatem numquam\net omnis occaecati quod ullam at\nvoluptatem error expedita pariatur\nnihil sint nostrum voluptatem reiciendis et",
+                            "email": "Jayne_Kuhic@sydney.com",
+                            "id": 2,
+                            "name": "quo vero reiciendis velit similique earum",
+                        },
+                        {
+                            "body": "quia molestiae reprehenderit quasi aspernatur\naut expedita occaecati aliquam eveniet laudantium\nomnis quibusdam delectus saepe quia accusamus maiores nam est\ncum et ducimus et vero voluptates excepturi deleniti ratione",
+                            "email": "Nikita@garfield.biz",
+                            "id": 3,
+                            "name": "odio adipisci rerum aut animi",
+                        },
+                        {
+                            "body": "non et atque\noccaecati deserunt quas accusantium unde odit nobis qui voluptatem\nquia voluptas consequuntur itaque dolor\net qui rerum deleniti ut occaecati",
+                            "email": "Lew@alysha.tv",
+                            "id": 4,
+                            "name": "alias odio sit",
+                        },
+                        {
+                            "body": "harum non quasi et ratione\ntempore iure ex voluptates in ratione\nharum architecto fugit inventore cupiditate\nvoluptates magni quo et",
+                            "email": "Hayden@althea.biz",
+                            "id": 5,
+                            "name": "vero eaque aliquid doloribus et culpa",
+                        },
+                    ],
+                    "id": 1,
+                    "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+                },
+                {
+                    "body": "est rerum tempore vitae\nsequi sint nihil reprehenderit dolor beatae ea dolores neque\nfugiat blanditiis voluptate porro vel nihil molestiae ut reiciendis\nqui aperiam non debitis possimus qui neque nisi nulla",
+                    "comments": [],
+                    "id": 2,
+                    "title": "qui est esse",
+                },
+                {
+                    "body": "et iusto sed quo iure\nvoluptatem occaecati omnis eligendi aut ad\nvoluptatem doloribus vel accusantium quis pariatur\nmolestiae porro eius odio et labore et velit aut",
+                    "comments": [],
+                    "id": 3,
+                    "title": "ea molestias quasi exercitationem repellat qui ipsa sit aut",
+                },
+                {
+                    "body": "ullam et saepe reiciendis voluptatem adipisci\nsit amet autem assumenda provident rerum culpa\nquis hic commodi nesciunt rem tenetur doloremque ipsam iure\nquis sunt voluptatem rerum illo velit",
+                    "comments": [],
+                    "id": 4,
+                    "title": "eum et est occaecati",
+                },
+                {
+                    "body": "repudiandae veniam quaerat sunt sed\nalias aut fugiat sit autem sed est\nvoluptatem omnis possimus esse voluptatibus quis\nest aut tenetur dolor neque",
+                    "comments": [],
+                    "id": 5,
+                    "title": "nesciunt quas odio",
+                },
+            ],
+            "?start=0&limit=5",
+            5,
+        ),
+    ],
+)
+def test_get_feeds_success(
+    request_context,
+    mock_get_10_feeds,
+    captured_logs,
+    test_data: List[Dict[str, Any]],
+    params: str,
+    count: int,
+):
+    async_mock = AsyncMock(return_value=test_data)
+    mock_get_10_feeds.side_effect = async_mock
+
+    with request_context(params):
+        response, status_code = asyncio.run(get_feeds())
+
+    log_counts = count_log_events(captured_logs, "get_feeds")
+    test_args = mock_get_10_feeds.call_args_list[0][1]
+    response_data = response.json
+
+    mock_get_10_feeds.assert_called_once()
+    assert test_args["start"] == 0
+    assert test_args["limit"] == count
+    assert status_code == 200
+    assert response_data["success"]
+    assert isinstance(response_data["data"], list)
+    assert response_data["data"] == test_data
+    assert len(response_data["data"]) == count
+    assert log_counts.get("REQUEST_RECEIVED")
+    assert log_counts.get("SUCCESS")
+    assert not log_counts.get("ERROR")
+
+
+def test_get_feeds_catch_api_exception(
+    request_context, mock_get_10_feeds, captured_logs
+):
+    async_mock = AsyncMock(
+        side_effect=APIException(
+            "Connection error Unreachable", endpoint="get_feeds", method="GET"
+        )
+    )
+
+    mock_get_10_feeds.side_effect = async_mock
+    with request_context("?start=0&limit=10"):
+        response, status_code = asyncio.run(get_feeds())
+
+    mock_get_10_feeds.assert_called_once()
+    response_data = response.json
+    log_counts = count_log_events(captured_logs, "get_feeds")
+
+    assert status_code == 502
+    assert not response_data["success"]
+    assert "Connection error Unreachable" in response_data["error"]
+    assert log_counts.get("REQUEST_RECEIVED")
+    assert not log_counts.get("SUCCESS")
+    assert log_counts.get("ERROR") == 1
+
+
+def test_get_feeds_catch_service_exception(
+    request_context, mock_get_10_feeds, captured_logs
+):
+    """Test GET /api/feeds ServiceException case."""
+    async_mock = AsyncMock(
+        side_effect=ServiceException(
+            "Internal Server Error", endpoint="get_feeds", method="GET"
+        )
+    )
+
+    mock_get_10_feeds.side_effect = async_mock
+    with request_context():
+        response, status_code = asyncio.run(get_feeds())
+
+    mock_get_10_feeds.assert_called_once()
+    response_data = response.json
+    log_counts = count_log_events(captured_logs, "get_feeds")
+
+    assert status_code == 500
+    assert not response_data["success"]
+    assert response_data["error"] == "Internal Server Error"
+    assert log_counts.get("REQUEST_RECEIVED")
+    assert not log_counts.get("SUCCESS")
+    assert log_counts.get("ERROR") == 1
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        "?start=0&limit=k",
+        "?start=a&limit=10",
+        "?start=1.5&limit=10",
+        "?start=0&limit=1.5",
+    ],
+)
+def test_get_feeds_catch_type_and_value_error(
+    request_context, mock_get_10_feeds, captured_logs, params: str
+):
+    with request_context(params):
+        response, status_code = asyncio.run(get_feeds())
+
+    response_data = response.json
+    log_counts = count_log_events(captured_logs, "get_feeds")
+
+    mock_get_10_feeds.assert_not_called()
+    assert log_counts.get("REQUEST_RECEIVED")
+    assert status_code == 400
+    assert not response_data["success"]
+    assert not log_counts.get("SUCCESS")
+    assert "invalid literal for int()" in response_data["error"]
+    assert log_counts.get("ERROR") == 1
+
+
+def test_get_feeds_catch_generic_exception(
+    request_context, mock_get_10_feeds, captured_logs
+):
+    """Test GET /api/feeds generic Exception case."""
+    async_mock = AsyncMock(side_effect=Exception("Some unexpected error occurred"))
+
+    mock_get_10_feeds.side_effect = async_mock
+    with request_context("?start=0&limit=10"):
+        response, status_code = asyncio.run(get_feeds())
+
+    mock_get_10_feeds.assert_called_once()
+    response_data = response.json
+    log_counts = count_log_events(captured_logs, "get_feeds")
+
+    assert status_code == 500
+    assert not response_data["success"]
+    assert "Some unexpected error" in response_data["error"]
+    assert log_counts.get("REQUEST_RECEIVED")
+    assert not log_counts.get("SUCCESS")
+    assert log_counts.get("ERROR") == 1
