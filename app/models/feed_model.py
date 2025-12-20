@@ -28,7 +28,7 @@ class Comment:
 
     def __init__(self, comment_data: dict):
         self._id: int = comment_data.get("id")
-        self._postId: int = comment_data.get("post_id", "")
+        self._postId: int = comment_data.get("post_id", None)
         self.name: str = comment_data.get("name", "")
         self.email: str = comment_data.get("email", "")
         self.body: str = comment_data.get("body", "")
@@ -53,8 +53,8 @@ class PostWithComments(Post):
 
     __slots__ = ("comments",)
 
-    def __init__(self, posts: Post, comments: List[Comment]):
-        self._id = posts.id
-        self.title = posts.title
-        self.body = posts.body
+    def __init__(self, post: Post, comments: List[Comment]):
+        self._id = post.id
+        self.title = post.title
+        self.body = post.body
         self.comments = comments

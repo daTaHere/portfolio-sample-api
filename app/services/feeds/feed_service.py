@@ -10,7 +10,6 @@ from typing import Any, Dict, List
 from marshmallow import ValidationError
 
 from app.models import Post, Comment, PostWithComments
-from app.schemas.feed_schemas import PostWithCommentsSchema
 from app.dto.feeds.feed_cache_dto import FeedCache
 from app.dto.feeds.feed_cache_schema import FeedCacheSchema
 
@@ -27,9 +26,6 @@ from app.utils.logger_helper import handle_log, debug_logger
 
 POST_ENDPOINT = "posts"
 COMMENT_ENDPOINT = "comments"
-
-feed_logger = debug_logger("get_10_feeds")
-feeds_schema = PostWithCommentsSchema(many=True)
 
 
 async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments]:
@@ -71,14 +67,6 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
             return feeds
 
         except (ValidationError, ValueError) as e:
-            feed_logger.error(
-                "Failed to load cached feeds with PostWithCommentsSchema().",
-                extra={
-                    "service_method": "get_10_feeds",
-                    "error": e,
-                    "block": "cache_get",
-                },
-            )
             handle_log(
                 f"Failed to load cached feeds: Validation Error.",
                 method="GET",

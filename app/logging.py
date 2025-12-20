@@ -1,7 +1,7 @@
 import structlog
 
 """
-This module configure structlog for structured logging across the application.
+This module configures structlog for structured logging across the application.
 It sets up processors to format logs in JSON with timestamps, log levels, and other useful metadata.
 It initializes a logger singleton instance for use throughout the app.
 """

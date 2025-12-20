@@ -68,6 +68,7 @@ class StagingConfig(Config):
     TESTING = False
 
     # Database settings (Postgres)
+    # Note: Update connection string in production using environment variable
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL",
         "postgresql://placeholder_user:placeholder_password@localhost:5432/placeholder_staging_db",
@@ -88,6 +89,7 @@ class ProductionConfig(Config):
     PERMANENT_SESSION_LIFETIME = 3600
 
     # Database settings (Postgres)
+    # Note: Update connection string in production using environment variable
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL",
         "postgresql://placeholder_user:placeholder_password@localhost:5432/placeholder_production_db",

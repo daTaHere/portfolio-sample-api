@@ -246,8 +246,6 @@ def test_cache_delete_success(patch_redis_client, captured_logs):
 def test_cache_delete_falsy_client_or_key_log_error(
     monkeypatch, captured_logs, patch_redis_client, use_client, key
 ):
-    value = DEFAULT_VALUE
-
     if not use_client:
         monkeypatch.setattr(cache_service, "redis_client", None)
 

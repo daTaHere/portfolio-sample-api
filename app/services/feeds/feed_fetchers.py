@@ -114,7 +114,6 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
                 "Internal Error: Type or value error.",
                 "Response data type or value error.",
                 event_key="ERROR",
-                log_level="debug",
                 exc_type=ServiceException,
                 service_method="send_request",
                 endpoint=url,

@@ -2,7 +2,11 @@ FROM python:3.12-slim-bookworm
 
 WORKDIR /api
 
-RUN apt update && apt upgrade -y && apt autoclean -y
+RUN apt update \
+    && apt upgrade -y --no-install-recommends \
+    && apt autoremove -y \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 
@@ -11,9 +15,8 @@ RUN pip install --upgrade pip \
 
 COPY . .
 
-# Possible security improvement: run as non-root user for production
-# RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /api
-# USER appuser
+# Security improvement: run as non-root user for production
+# For this demo, we keep root to simplify container startup
 
 EXPOSE 5000
 
