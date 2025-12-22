@@ -42,9 +42,11 @@ def create_app(config_name=None):
     # Register blueprints
     from app.routes.user_routes import user_bp
     from app.routes.feed_routes import feed_bp
+    from app.routes.weather_route import weather_bp
 
     app.register_blueprint(user_bp, url_prefix="/api")
     app.register_blueprint(feed_bp, url_prefix="/api")
+    app.register_blueprint(weather_bp, url_prefix="/api")
 
     # Create database tables
     with app.app_context():

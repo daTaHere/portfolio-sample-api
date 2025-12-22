@@ -38,7 +38,9 @@ class Config:
     OPENWEATHER_API_KEY = os.getenv(
         "OPENWEATHER_API_KEY", "placeholder-openweather-api-key"
     )
-    OPENWEATHER_BASE_URL = "https://api.openweathermap.org/data/2.5"
+    OPENWEATHER_BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
+    OPENWEATHER_ONECALL_BASE_URL = "https://api.openweathermap.org/data/3.0/onecall?"
+    GEO_DECODING_BASE_URL = "http://api.openweathermap.org/geo/1.0/reverse"
     JSONPLACEHOLDER_BASE_URL = "https://jsonplaceholder.typicode.com"
 
     # CORS settings
