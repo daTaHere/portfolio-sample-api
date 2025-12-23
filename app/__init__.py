@@ -3,12 +3,16 @@ Flask application factory.
 Initializes and configures the Flask app with all extensions.
 """
 
+import os
+
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from apscheduler.schedulers.background import BackgroundScheduler
+
 from app.logging import logger
 from app.clients.redis_client import init_redis
-import os
+
 
 # Initialize extensions
 db = SQLAlchemy()
@@ -39,14 +43,32 @@ def create_app(config_name=None):
     init_redis(app)
     CORS(app)
 
+    # --- Production ProxyFix config (trust first proxy) ---
+    # from werkzeug.middleware.proxy_fix import ProxyFix
+
+    # # 🔒 Trust exactly 1 proxy hop
+    # app.wsgi_app = ProxyFix(
+    #     app.wsgi_app,
+    #     x_for=1,
+    #     x_proto=1,
+    #     x_host=1,
+    #     x_port=1,
+    # )
+
     # Register blueprints
-    from app.routes.user_routes import user_bp
-    from app.routes.feed_routes import feed_bp
-    from app.routes.weather_route import weather_bp
+    from app.routes import user_bp, feed_bp, weather_bp
 
     app.register_blueprint(user_bp, url_prefix="/api")
     app.register_blueprint(feed_bp, url_prefix="/api")
     app.register_blueprint(weather_bp, url_prefix="/api")
+
+    # --- initialize scheduler ---
+    from app.tasks import fetch_weather_updates
+
+    scheduler = BackgroundScheduler()
+    # Add jobs here, e.g.:
+    scheduler.add_job(func=fetch_weather_updates, trigger="interval", minutes=2)
+    scheduler.start()
 
     # Create database tables
     with app.app_context():

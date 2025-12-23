@@ -6,7 +6,10 @@ Routes are a fully asynchronous implementation with 3rd party API integration, c
 
 import httpx
 import asyncio
+import requests
+
 from flask import Blueprint, request
+from typing import Any, Dict, Generator, List, Tuple
 
 from app.exceptions.base import APIException, ServiceException
 from app.exceptions.exception_handlers import handle_route_error
@@ -34,17 +37,31 @@ weather_bp = Blueprint("weather", __name__)
 logger = debug_logger("weather_routes")
 
 
-# -- coordinate validation helper ---
-def canonicalize_coords(lat, lon):
-    """Validate, cast, truncate to 2 decimals"""
+# --- Tructaete location data to 1 decimal to reduce cache size ---
+def canonicalize_coords(lat: float, lon: float) -> Tuple[float, float]:
+    """Validate, cast, truncate to 2 decimal == ~1.1km/0.7m precision"""
     lat, lon = float(lat), float(lon)
     if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
         raise ValueError("Invalid coordinates")
     return (round(lat, 2), round(lon, 2))
 
 
+# --- Geo IP lookup service ---
+def geo_ip_look() -> float:
+    """Get client IP from request and lookup geolocation"""
+    client_ip = "8.8.8.8"  # For local development testing
+    # For real deployment reference app/__init__.py for ProxyFix config
+    # client_ip = request.remote_addr <-- Uncomment when behind trusted proxy
+    ip_get = f"https://ipinfo.io/{client_ip}/json"
+    ip_response = requests.get(ip_get)
+    ip_data = ip_response.json()
+    logger.debug(f"IP Geolocation data: {ip_data}")
+    ip_lat, ip_lon = map(float, ip_data["loc"].split(","))
+    return ip_lat, ip_lon
+
+
 # --- async fetch weather api call ---
-async def fetch_weather(lat, lon):
+async def fetch_weather(lat: float, lon: float) -> Dict[str, Any]:
     """Fetch weather from OpenWeatherMap"""
     url = f"{Config.OPENWEATHER_BASE_URL}?lat={lat}&lon={lon}&APPID={Config.OPENWEATHER_API_KEY}"
     async with httpx.AsyncClient() as client:
@@ -53,24 +70,17 @@ async def fetch_weather(lat, lon):
         return resp.json()
 
 
-#  --- geo IP lookup stubbed out for future implementation ---
-def geo_ip_look(lat, lon):
-    """Validate, cast, truncate to 2 decimals"""
-    lat, lon = float(lat), float(lon)
-    if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
-        raise ValueError("Invalid coordinates")
-    return round(lat, 2), round(lon, 2)
-
-
 # --- batching helper ---
-def batches(lst, n):
+def batches(
+    lst: List[Tuple[float, float]], n: int
+) -> Generator[List[Tuple[float, float]], None, None]:
     """Yield successive n-sized chunks from list"""
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
 
 
 # ---Async fetch missing coordinates ---
-async def fetch_with_index(idx, lat, lon):
+async def fetch_with_index(idx: int, lat: float, lon: float) -> Any:
     data = await fetch_weather(lat, lon)
     return idx, lat, lon, data
 
@@ -79,19 +89,25 @@ async def fetch_with_index(idx, lat, lon):
 async def get_weather():
     """
     GET /weather?lat=..&lon=..
-    Returns weather for requested location + default cities
+    Returns weather for requested location + default cities.
+    - Attempts to use provided lat/lon query params.
+    - Falls back to IP geolocation if params are missing.
+    - Caches results keyed by 2 decimals lat/lon for precision.
     """
-
     try:
-        # --- 1️⃣ Resolve user location ---
         lat = request.args.get("lat")
         lon = request.args.get("lon")
+
         if lat and lon:
+            # Prefer user-provided coords
             user_coords = canonicalize_coords(lat, lon)
         else:
-            pass
+            # Fallback to geo IP lookup
+            ip_lat, ip_lon = geo_ip_look()
+            logger.debug(f"Geo IP coords: {type(ip_lat)}, {type(ip_lon)}")
+            user_coords = canonicalize_coords(ip_lat, ip_lon)
 
-        # --- 2️⃣ Prepare fetch list with ordering ---
+        # ---  Prepare fetch list with ordering ---
         fetch_loc = DEFAULT_CITIES.copy()
         if user_coords not in fetch_loc:
             fetch_loc = [user_coords] + fetch_loc[:-1]  # prepend user, slice to 10
@@ -99,9 +115,12 @@ async def get_weather():
             idx = fetch_loc.index(user_coords)
             fetch_loc[0], fetch_loc[idx] = fetch_loc[idx], fetch_loc[0]
 
-        # --- 3️⃣ Separate cached vs missing ---
+        # --- cache coords list for scheduler/polling use ---
+        cache_set("weather_coords_list", fetch_loc, ttl=600)
+
+        # --- Separate cached vs missing ---
         cached_results = [None] * len(fetch_loc)
-        missing_coords = []
+        missing_coords: List[Tuple[int, Tuple[float, float]]] = []
         for i, (lat, lon) in enumerate(fetch_loc):
             cache_key = f"{lat},{lon}"
             cached = cache_get(cache_key)
@@ -114,9 +133,8 @@ async def get_weather():
             batch_size = 5  # limit you want per batch
 
             for batch in batches(missing_coords, batch_size):
-                # create coroutines for this batch
+                # create coroutines and request concurrently
                 tasks = [fetch_with_index(idx, lat, lon) for idx, (lat, lon) in batch]
-                # run them concurrently
                 results = await asyncio.gather(*tasks)
 
                 # process results
