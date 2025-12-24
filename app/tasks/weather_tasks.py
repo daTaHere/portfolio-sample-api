@@ -1,7 +1,8 @@
 import asyncio
 
 from app.services.cache_service import cache_set, cache_get
-from app.routes.weather_routes import DEFAULT_CITIES, fetch_with_index, batches
+from app.services.weather.weather_builders import DEFAULT_CITIES, batcher
+from app.services.weather.weather_fetchers import fetch_with_index
 from app.utils.logger_helper import debug_logger
 
 
@@ -9,6 +10,7 @@ _logger = debug_logger("weather_tasks")
 
 
 def process_refresh_data(lat: float, lon: float, data: dict):
+    """Process and store refreshed weather data in cache"""
     cache_key = f"{lat},{lon}"
     fresh_weather_data = data
     city_name = fresh_weather_data.get("name")
@@ -21,7 +23,10 @@ def fetch_weather_updates():
     cache_loc_list = cache_get("weather_coords_list") or DEFAULT_CITIES
 
     async def _runner():
-        for batch in batches(cache_loc_list, 5):
+        _logger.debug(
+            "========    Scheduler task: Fetching weather updates for cached locations.    =========="
+        )
+        for batch in batcher(cache_loc_list):
             tasks = [fetch_with_index(0, lat, lon) for lat, lon in batch]
             coords = await asyncio.gather(*tasks)
 
@@ -30,8 +35,6 @@ def fetch_weather_updates():
         cache_set("weather_coords_list", cache_loc_list, ttl=600)
 
     asyncio.run(_runner())
-
-    _logger.info("Weather cache refresh complete =======")
-
-    data = cache_get("weather_coords_list")
-    _logger.debug(f"Refreshed coords list: {data}  ============")
+    _logger.debug(
+        f"=========== Scheduler task completed. cached key 'weather_coords_list' updated.   ==========="
+    )

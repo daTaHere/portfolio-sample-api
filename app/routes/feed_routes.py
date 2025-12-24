@@ -6,7 +6,7 @@ Routes are a fully asynchronous implementation with 3rd party API integration, c
 
 from flask import Blueprint, request
 
-from app.services.feeds.feed_service import get_10_feeds
+from app.services.feeds import get_10_feeds
 from app.schemas.feed_schemas import PostWithCommentsSchema
 
 from app.exceptions.base import APIException, ServiceException

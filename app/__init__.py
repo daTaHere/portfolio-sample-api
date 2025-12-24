@@ -9,6 +9,7 @@ from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from apscheduler.schedulers.background import BackgroundScheduler
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.logging import logger
 from app.clients.redis_client import init_redis
@@ -46,14 +47,14 @@ def create_app(config_name=None):
     # --- Production ProxyFix config (trust first proxy) ---
     # from werkzeug.middleware.proxy_fix import ProxyFix
 
-    # # 🔒 Trust exactly 1 proxy hop
-    # app.wsgi_app = ProxyFix(
-    #     app.wsgi_app,
-    #     x_for=1,
-    #     x_proto=1,
-    #     x_host=1,
-    #     x_port=1,
-    # )
+    # 🔒 Trust exactly 1 proxy hop
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app,
+        x_for=1,
+        x_proto=1,
+        x_host=1,
+        x_port=1,
+    )
 
     # Register blueprints
     from app.routes import user_bp, feed_bp, weather_bp
@@ -67,7 +68,7 @@ def create_app(config_name=None):
 
     scheduler = BackgroundScheduler()
     # Add jobs here, e.g.:
-    scheduler.add_job(func=fetch_weather_updates, trigger="interval", minutes=2)
+    scheduler.add_job(func=fetch_weather_updates, trigger="interval", minutes=50)
     scheduler.start()
 
     # Create database tables
