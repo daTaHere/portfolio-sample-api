@@ -31,6 +31,33 @@ def handle_service_error(
     raise exc_type(exc_message, endpoint=url, method=method) from exc
 
 
+def handle_api_error(
+    exc: Exception,
+    log_message: str,
+    *,
+    exc_type: Type[Exception],
+    url: Optional[str] = "",
+    method: Optional[str] = "",
+    service_name: Optional[str] = None,
+    service_method: str = "",
+    event_key: str = "ERROR",
+    **extra: Any,
+) -> None:
+    """Helper function to log and raise low-level exceptions consistently."""
+    logger.error(
+        log_message,
+        extra={
+            "event_key": event_key,
+            "endpoint": url,
+            "method": method,
+            "service_method": service_method,
+            "error": str(exc),
+            **extra,
+        },
+    )
+    raise exc_type(endpoint=url, method=method, service_name=service_name) from exc
+
+
 def handle_route_error(
     exc: Exception,
     log_message: str,

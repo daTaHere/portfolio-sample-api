@@ -40,6 +40,7 @@ async def get_current_weather(coords: List[float] | None) -> Dict[str, Any]:
             "service_method": "get_current_weather",
         },
     )
+    user_coords = None
 
     try:
         if coords:
@@ -51,7 +52,6 @@ async def get_current_weather(coords: List[float] | None) -> Dict[str, Any]:
                 },
             )
             user_coords = canonicalize_coords(coords)
-
         _logger.debug(
             "====== Line: 54  Creating fetch location list. ========",
             extra={
@@ -106,8 +106,7 @@ async def get_current_weather(coords: List[float] | None) -> Dict[str, Any]:
         )
         return results
 
-    except Exception as e:
+    except (ValueError, TypeError) as e:
         _logger.exception(
             "Error in /weather", extra={"service_method": "get_current_weather"}
         )
-        return handle_route_response(False, str(e), 500)

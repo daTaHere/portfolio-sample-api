@@ -68,11 +68,17 @@ def geo_ip_lookup() -> List[float] | None:
     try:
         # Use this line in production environment (from flask import request)
         # client_ip = request.addr
-        client_ip = requests.get("https://api.ipify.org").text  # For local testing
-        ip_get = f"https://ipinfo.io/{client_ip}/json"
-        ip_response = requests.get(ip_get)
+        client_ip = requests.get(
+            "https://api.ipify.org", timeout=2
+        )  # For local testing
+        ip_get = f"https://ipinfo.io/{client_ip.text.strip()}/json"
+        ip_response = requests.get(ip_get, timeout=2)
+        ip_response.raise_for_status()
         ip_data = ip_response.json()
         _logger.debug(f"IP Geolocation data: {ip_data}")
+
+        if not ip_data.get("lat"):
+            return None
     except Exception as e:
         # DONOT raise error!!! log and return None
         _logger.error(

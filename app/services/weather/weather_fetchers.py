@@ -1,22 +1,21 @@
-"""This module handles fetching weather data from OpenWeatherMap API asynchronously."""
+"""This module includes functions to fetch weather data from OpenWeatherMap API asynchronously."""
 
-# ++++++++++ Initial refactor   ++++++++++++
-# - logging change for debug helper to root level
-# - schmea validation external API responses, internal class and cache dto
-# - unit testing
-#  Implemention later
-
+import asyncio
 from typing import Any, Dict, List, Tuple
 
 import httpx
-import asyncio
+from marshmallow import ValidationError
 
-from app.exceptions.base import APIException, ServiceException
-from app.exceptions.exception_handlers import handle_route_error, handle_service_error
+from app.exceptions.api import (
+    APITimeoutException,
+    APIConnectionException,
+    APIBadStatusCode,
+)
 from app.services.cache_service import cache_set
-from app.utils.route_utils import handle_route_response
-from app.utils.logger_helper import handle_log, debug_logger
+from app.exceptions.exception_handlers import handle_api_error
+from app.utils.logger_helper import handle_log
 from app.services.weather.weather_builders import batcher
+from app.schemas.weather_schemas import OpenWeatherSchema
 
 from config import Config
 
@@ -24,142 +23,180 @@ MAX_RETRIES = 3
 HTTP_TIMEOUT_SECONDS = 5.0
 RETRY_BACKOFF_BASE = 0.2  # seconds
 
-_logger = debug_logger("weather_fetchers")
 
-
-# --- Main Helper httpx request to OPENWEATHERMAP API ---
 async def request_weather(lat: float, lon: float) -> Dict[str, Any]:
-    """Fetch weather from OpenWeatherMap"""
-    _logger.debug(
+    """
+    Fetch weather data for given latitude and longitude from OpenWeatherMap API.
+    Implements retries with exponential backoff for connection and timeout errors.
+    """
+    handle_log(
         f"Requesting weather for coords: {lat}, {lon}",
-        extra={
-            "module": "app/services/weather/weather_fetchers.py",
-            "service_method": "request_weather ",
-        },
+        method="GET",
+        event_key="REQUEST_INITIATED",
+        log_level="info",
+        service_method="request_weather",
+        endpoint=Config.OPENWEATHER_BASE_URL,
     )
-    url = f"{Config.OPENWEATHER_BASE_URL}?lat={lat}&lon={lon}&APPID={Config.OPENWEATHER_API_KEY}"
-    for attempt in range(1, MAX_RETRIES + 1):
-        # todo's: add retry for response error, validation error, and decoding error later
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(url)
+
+    url = f"{Config.OPENWEATHER_BASE_URL}?lat={lat}&lon={lon}"  # Base endpoint construction
+    endpoint = f"{url}&APPID={Config.OPENWEATHER_API_KEY}"  # Add API key
+    validator = OpenWeatherSchema()
+
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
+        for attempt in range(1, MAX_RETRIES + 1):
+            handle_log(
+                f"Attempt: {attempt} for coords: {lat}, {lon}",
+                method="GET",
+                event_key="ATTEMPTS",
+                log_level="info",
+                service_method="request_weather",
+                endpoint=url,
+            )
+            try:
+                resp = await client.get(endpoint)
                 resp.raise_for_status()
-                data = resp.json()
-                cache_set(f"{lat},{lon}", data, ttl=300)  # 5 min cache
+
+                data = validator.load(resp.json())
+
+                cache_set(f"{lat},{lon}", resp.text, ttl=300)  # 5 min cache
                 cache_set(str(data["name"]), (lat, lon), ttl=300)
 
-                _logger.debug(
-                    f" ===============   OPENWEATHER request successful for coords: {lat}, {lon}",
-                    extra={
-                        "module": "app/services/weather/weather_fetchers.py",
-                        "service_method": "request_weather ",
-                    },
+                handle_log(
+                    f"OPENWEATHER request successful for coords: {lat}, {lon}",
+                    method="GET",
+                    event_key="SUCCESS",
+                    log_level="info",
+                    service_method="request_weather",
+                    endpoint=url,
                 )
-
                 return data
-        except (httpx.RequestError, httpx.ConnectTimeout) as e:
-            wait_time = RETRY_BACKOFF_BASE * (2 ** (attempt - 1))
-            if attempt == MAX_RETRIES:
-                handle_service_error(
-                    e,
-                    "External API Error: Unreachable",
-                    "Request failed. Exhausted all retries.",
-                    exc_type=APIException,
-                    url=url,
-                    service_method="send_request",
+            except httpx.ConnectError as e:
+                wait_time = RETRY_BACKOFF_BASE * (2 ** (attempt - 1))
+                if attempt == MAX_RETRIES:
+                    handle_api_error(
+                        e,
+                        "Unreachable: failed to establish connection to OpenWeatherMap API.",
+                        exc_type=APIConnectionException,
+                        url=url,
+                        method="GET",
+                        service_name="OpenWeatherMap_API",
+                        service_method="request_weather",
+                    )
+                handle_log(
+                    f"CONNECT ERROR: Request attempt failed, retrying in {wait_time:.2f}s",
+                    method="GET",
+                    event_key="RETRIES",
+                    log_level="warning",
+                    service_method="request_weather",
+                    endpoint=url,
+                    request_attempt=attempt,
+                    error=str(e),
                 )
-            handle_log(
-                f"Request attempt failed, retrying in {wait_time:.2f}s",
-                method="GET",
-                event_key="RETRIES",
-                log_level="warning",
-                service_method="send_request",
-                endpoint=url,
-                request_attempt=attempt,
-                error=str(e),
-            )
-            await asyncio.sleep(wait_time)
-        except httpx.HTTPStatusError as e:
-            handle_service_error(
-                e,
-                f"External API Error: Bad status code: {e.response.status_code}",
-                "Request returned bad status code.",
-                exc_type=APIException,
-                url=url,
-                service_method="send_request",
-            )
-        # except ValidationError as e: <-- stub out for future schema validation
-        #     handle_service_error(
-        #         e,
-        #         "External API Error: Data validation failed.",
-        #         "Response data validation error.",
-        #         exc_type=APIException,
-        #         url=url,
-        #         service_method="send_request",
-        #     )
-        except (TypeError, ValueError) as e:
-            handle_service_error(
-                e,
-                "Internal Error: Type or value error.",
-                "Response data type or value error.",
-                event_key="ERROR",
-                log_level="debug",
-                exc_type=ServiceException,
-                service_method="send_request",
-                endpoint=url,
-                error=str(e),
-            )
+                await asyncio.sleep(wait_time)
+            except (httpx.ConnectTimeout, httpx.TimeoutException) as e:
+                wait_time = RETRY_BACKOFF_BASE * (2 ** (attempt - 1))
+                if attempt == MAX_RETRIES:
+                    handle_api_error(
+                        e,
+                        "Unreachable: fetch failed due to timeout.",
+                        exc_type=APITimeoutException,
+                        url=url,
+                        method="GET",
+                        service_name="OpenWeatherMap_API",
+                        service_method="request_weather",
+                    )
+                handle_log(
+                    f"TIMEOUT ERROR: Request attempt failed, retrying in {wait_time:.2f}s",
+                    method="GET",
+                    event_key="RETRIES",
+                    log_level="warning",
+                    service_method="request_weather",
+                    endpoint=url,
+                    request_attempt=attempt,
+                    error=str(e),
+                )
+                await asyncio.sleep(wait_time)
+            except httpx.HTTPStatusError as e:
+                handle_api_error(
+                    e,
+                    "Bad status code received from OpenWeatherMap API.",
+                    exc_type=APIBadStatusCode,
+                    url=url,
+                    method="GET",
+                    service_name="OpenWeatherMap API",
+                    service_method="request_weather",
+                )
+            except ValidationError as e:
+                handle_log(
+                    "Validation Error: Invalid data format received from OpenWeatherMap API.",
+                    method="GET",
+                    event_key="ERROR",
+                    log_level="error",
+                    service_method="request_weather",
+                    service_name="OpenWeatherMap_API",
+                    endpoint=url,
+                    error=str(e),
+                )
+                return {}
+            except (TypeError, ValueError) as e:
+                handle_log(
+                    "Value/Type Error: Invalid data type received from response",
+                    method="GET",
+                    event_key="ERROR",
+                    log_level="error",
+                    service_method="request_weather",
+                    service_name="OpenWeatherMap_API",
+                    endpoint=url,
+                    error=str(e),
+                )
+                return {}
 
 
-# --- Fetch all on NO CACHE HITS ---
 async def fetch_all(loc_list: List[Tuple[float, float]]) -> List[Dict[str, Any]]:
-    _logger.debug(
-        f'=====  Line: 45 ======  NO CACHE HITS "fetch_all": {len(loc_list)}',
-        extra={
-            "module": "app/services/weather/weather_fetchers.py",
-            "service_method": "fetch_all ",
-        },
+    """Function to fetch weather data for all coordinates in loc_list."""
+    handle_log(
+        "Cache miss for all coordinates, fetching all from API",
+        log_level="info",
+        event_key="INFO",
+        service_method="fetch_all",
+        service_name="OpenWeatherMap_API",
     )
+    results = []
     for batch in batcher(loc_list):
         tasks = [request_weather(lat, lon) for lat, lon in batch]
-        results = await asyncio.gather(*tasks)
-        return results
+        results.extend(await asyncio.gather(*tasks))
+    return results
 
 
-# --- Fetch partial on CACHE MISSES ---
 async def fetch_cache_missed(
     missed_coords: List[Tuple[int, Tuple]], cached_list: List[Dict]
 ) -> List[Dict]:
-    _logger.debug(
-        f"======= Line: 60 ======  PARTIAL CACHE HIT fetch missing: {len(missed_coords)} counts",
-        extra={
-            "module": "app/services/weather/weather_fetchers.py",
-            "service_method": "fetch_cache_missed ",
-        },
+    """Function to fetch weather data for partial missing coordinates in cache"""
+    handle_log(
+        "Fetching missing coordinates from API",
+        log_level="info",
+        event_key="INFO",
+        service_method="fetch_cache_missed ",
+        service_name="OpenWeatherMap_API",
     )
     response = []
     for batch in batcher(missed_coords):
-        # create coroutines and request concurrently
         tasks = [fetch_with_index(idx, lat, lon) for idx, (lat, lon) in batch]
         response = await asyncio.gather(*tasks)
     # process results
-    _logger.debug(
-        f"======= Line: 83 ======  Attempting to process missing coordinates ========.",
-        extra={
-            "module": "app/services/weather/weather_fetchers.py",
-            "service_method": "fetch_cache_missed ",
-        },
-    )
     for idx, weather_data in response:
         cached_list[idx] = weather_data
-    _logger.debug(
-        f"Fetch missing coords completed count: {len(cached_list)} cached",
-        extra={"service_method": "fetch_cache_missed "},
+    handle_log(
+        "Fetch missing coords completed",
+        log_level="info",
+        event_key="SUCCESS",
+        service_method="fetch_cache_missed ",
+        service_name="OpenWeatherMap_API",
     )
     return cached_list
 
 
-# ---Async fetch missing coordinates ---
 async def fetch_with_index(idx: int, lat: float, lon: float) -> Any:
+    """Helper to fetch weather data and preserve list order"""
     data = await request_weather(lat, lon)
     return idx, data

@@ -19,6 +19,7 @@ from app.services.cache_service import cache_get, cache_set
 from app.utils.route_utils import handle_route_response
 from app.utils.logger_helper import handle_log, debug_logger
 from app.services.weather.weather_validators import canonicalize_coords
+from app.schemas.weather_schemas import OpenWeatherSchema
 
 DEFAULT_CITIES = [
     (34.05, -118.24),  # LA
@@ -108,7 +109,7 @@ def process_from_cache(loc_list: List[float]) -> Tuple[List[Dict], List[Tuple]]:
         cache_key = f"{lat},{lon}"
         cached = cache_get(cache_key)
         if cached:
-            cached_results[i] = cached
+            cached_results[i] = OpenWeatherSchema().loads(cached)
         else:
             missing_coords.append((i, (lat, lon)))
     _logger.debug(

@@ -8,6 +8,7 @@ from flask import Blueprint, request
 
 from app.exceptions.base import APIException, ServiceException
 from app.exceptions.exception_handlers import handle_route_error
+from app.exceptions.api import APIConnectionException, APITimeoutException
 
 from app.services.weather import get_current_weather
 
@@ -49,8 +50,11 @@ async def get_weather():
         _logger.debug(
             f"Weather route response: 200 OK ======= response count: {len(response)} "
         )
+        if len(response) == 0:
+            return handle_route_response(True, "Not Found", 404)
         return handle_route_response(True, response, 200)
 
-    except Exception as e:
-        _logger.exception("Error in /weather")
-        return handle_route_response(False, str(e), 500)
+    except APIConnectionException as e:
+        return handle_route_response(False, str(e), 503)
+    except APITimeoutException as e:
+        return handle_route_response(False, str(e), 408)
