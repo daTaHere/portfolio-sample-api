@@ -86,6 +86,9 @@ async def get_current_weather(coords: List[float] | None) -> Dict[str, Any]:
                         "service_method": "get_current_weather",
                     },
                 )
+                _logger.debug(
+                    f"====== Line: 52 FULL Fetch ALL ---> {fetch_loc} ========"
+                )
                 return await fetch_all(fetch_loc)
 
             results = await fetch_cache_missed(missing_coords, results)

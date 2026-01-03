@@ -157,7 +157,7 @@ async def fetch_all(loc_list: List[Tuple[float, float]]) -> List[Dict[str, Any]]
     handle_log(
         "Cache miss for all coordinates, fetching all from API",
         log_level="info",
-        event_key="INFO",
+        event_key="FETCH_ALL",
         service_method="fetch_all",
         service_name="OpenWeatherMap_API",
     )
@@ -176,7 +176,7 @@ async def fetch_cache_missed(
         "Fetching missing coordinates from API",
         log_level="info",
         event_key="INFO",
-        service_method="fetch_cache_missed ",
+        service_method="fetch_cache_missed",
         service_name="OpenWeatherMap_API",
     )
     response = []
@@ -190,13 +190,22 @@ async def fetch_cache_missed(
         "Fetch missing coords completed",
         log_level="info",
         event_key="SUCCESS",
-        service_method="fetch_cache_missed ",
+        service_method="fetch_cache_missed",
         service_name="OpenWeatherMap_API",
     )
     return cached_list
 
 
-async def fetch_with_index(idx: int, lat: float, lon: float) -> Any:
+async def fetch_with_index(
+    idx: int, lat: float, lon: float
+) -> Tuple[int, Dict[str, Any]]:
     """Helper to fetch weather data and preserve list order"""
+    handle_log(
+        f"Fetch missing coord at index {idx}: {lat}, {lon}",
+        method="GET",
+        event_key="FETCH_WITH_INDEX",
+        log_level="info",
+        service_method="fetch_with_index",
+    )
     data = await request_weather(lat, lon)
     return idx, data
