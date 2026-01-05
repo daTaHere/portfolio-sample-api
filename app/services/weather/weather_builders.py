@@ -3,22 +3,10 @@ This module contains the weather builders responsible for preparing
 weather data for fetching and processing.
 """
 
-# ++++++++++ Initial refactor   ++++++++++++
-# - error handling
-# - logging
-# - schmea validation external API responses, internal class and cache dto
-# - unit testing
-#  Implemention later
-
 from typing import Dict, Generator, List, Tuple
 
-from app.exceptions.base import APIException, ServiceException
-from app.exceptions.exception_handlers import handle_route_error
-
-from app.services.cache_service import cache_get, cache_set
-from app.utils.route_utils import handle_route_response
-from app.utils.logger_helper import handle_log, debug_logger
-from app.services.weather.weather_validators import canonicalize_coords
+from app.services.cache_service import cache_get
+from app.utils.logger_helper import handle_log
 from app.schemas.weather_schemas import OpenWeatherSchema
 
 DEFAULT_CITIES = [
@@ -36,56 +24,66 @@ DEFAULT_CITIES = [
 
 DEFAULT_BATCH_SIZE = 5
 
-_logger = debug_logger("weather_builders")
 
-
-# --- Batch generator ---
 def batcher(
     lst: List[Tuple[float, float]], n: int = DEFAULT_BATCH_SIZE
 ) -> Generator[List[Tuple[float, float]], None, None]:
-    """Yield successive n-sized chunks from list"""
+    """Helper to batch a list into chunks of size n"""
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
 
 
 def create_fetch_list(user_coords: List[float] | None) -> List[Tuple[float, float]]:
     """
-    Build and order coordinates list for fetching weather data and cached list.
+    Build and order coordinates list for fetching weather.
     returns: List of 10 tuples (lat, lon)
     - Prepends user coords if provided or part of DEFAULT_CITIES list.
     - Return DEFAULT_CITIES if user coords cannot be resolved.
     """
-    _logger.debug(
-        f"Create coords list for fetching weather data.",
-        extra={"service_method": "create_fetch_list", "coords": user_coords},
+    handle_log(
+        "Build coords list for fetching weather data.",
+        log_level="info",
+        event_key="INFO",
+        service_method="create_fetch_list",
     )
+
     fetch_loc = DEFAULT_CITIES.copy()
     if not user_coords:
+        handle_log(
+            "No user coordinates provided, fallback to default cities.",
+            log_level="info",
+            event_key="GET_DEFAULT_CITIES",
+            service_method="create_fetch_list",
+        )
         return fetch_loc
 
     if user_coords not in fetch_loc:
-        _logger.debug(
-            f"User coords not in default cities, prepending to fetch list.",
-            extra={"service_method": "create_fetch_list", "coords": user_coords},
+        handle_log(
+            "User location not a default city, prepending to list.",
+            log_level="info",
+            event_key="PREPEND_USER_COORDS",
+            service_method="create_fetch_list",
+            coords=user_coords,
         )
         fetch_loc = [user_coords] + fetch_loc[:-1]  # prepend user, slice to 10
     else:
-        # Swap user coords to first position
-        _logger.debug(
-            f"User coords found in default cities, swapping to first position.",
-            extra={"service_method": "create_fetch_list", "coords": user_coords},
+        handle_log(
+            "User location is a default city, swapping to first position.",
+            log_level="info",
+            event_key="SWAP_LOCATION_ORDER",
+            service_method="create_fetch_list",
         )
         idx = fetch_loc.index(user_coords)
         fetch_loc[0], fetch_loc[idx] = fetch_loc[idx], fetch_loc[0]
 
-    cache_set("weather_coords_list", fetch_loc, ttl=600)
-    _logger.debug(
-        f"Location list 'FINALIZED' and cached.",
-        extra={
-            "service_method": "create_fetch_list",
-            "user_coords": user_coords,
-            "fetch_count": len(fetch_loc),
-        },
+    # placeholder: later caching strategy for location list integrating specific user loc list via session-token,cookie,etc.
+    # cache_set("weather_coords_list", fetch_loc, ttl=600)
+
+    handle_log(
+        "Location list 'FINALIZED' and cached.",
+        log_level="info",
+        event_key="SUCCESS",
+        service_method="create_fetch_list",
     )
 
     return fetch_loc
@@ -93,18 +91,26 @@ def create_fetch_list(user_coords: List[float] | None) -> List[Tuple[float, floa
 
 def process_from_cache(loc_list: List[float]) -> Tuple[List[Dict], List[Tuple]]:
     """
-    Check for cache "hits" for given list of coordinates.
-    return: Tuple of (cached_results_list, missing_coords_list)
-    - list of cached results.
-    - list of missing coords as (index, (lat, lon)) tuples.
+    Process location list against cache, returning cached results and missing coords.
+    Args:
+        loc_list: List of tuples (lat, lon)
+    Returns:
+        cached_results: List of cached weather data dicts or Nones
+        missing_coords: List of tuples (index, (lat, lon)) for cache misses
     """
-    _logger.debug(
-        f"Processing cache for location list.",
-        extra={"service_method": "process_from_cache", "loc_list": loc_list},
+
+    handle_log(
+        "Processing cache for location list.",
+        log_level="info",
+        event_key="PROCESS_FROM_CACHE",
+        service_method="process_from_cache",
     )
+
+    # Initialize results list and empty list for missing coordinates
     cached_results = [None] * len(loc_list)
     missing_coords: List[Tuple[int, Tuple[float, float]]] = []
 
+    # Check cache for each coordinate and deserialize and populate result List if "hit" or append to misses List
     for i, (lat, lon) in enumerate(loc_list):
         cache_key = f"{lat},{lon}"
         cached = cache_get(cache_key)
@@ -112,12 +118,14 @@ def process_from_cache(loc_list: List[float]) -> Tuple[List[Dict], List[Tuple]]:
             cached_results[i] = OpenWeatherSchema().loads(cached)
         else:
             missing_coords.append((i, (lat, lon)))
-    _logger.debug(
-        f"======= Line: 100 Cache processing completed. Hits: {len(cached_results) - len(missing_coords)}, Misses: {len(missing_coords)}",
-        extra={
-            "service_method": "process_from_cache",
-            "cache_hits": len(cached_results) - len(missing_coords),
-            "cache_misses": len(missing_coords),
-        },
+
+    handle_log(
+        "Cache processing complete.",
+        log_level="info",
+        event_key="SUCCESS",
+        service_method="process_from_cache",
+        missing_count=len(missing_coords),
+        cached_count=len(loc_list) - len(missing_coords),
     )
+
     return cached_results, missing_coords

@@ -1,10 +1,11 @@
 """
-Comprehensive unit tests for the weather fetcher functions
-Covers:
+Comprehensive unit tests for request_weather related helper functions.
+Tests cover:
 - Successful api call counts.
 - Argument passing correctness.
 - Handling of cache misses.
 - Logging of function events.
+- Verification of returned data structures and order preservation.
 """
 
 import pytest
@@ -82,7 +83,7 @@ async def test_fetch_all_success(
     assert mock_request_weather.call_count == len(DEFAULT_COORDS_LIST)
     assert actual_args == DEFAULT_COORDS_LIST
     assert len(results) == len(DEFAULT_COORDS_LIST)
-    assert log_counts.get("FETCH_ALL")
+    assert log_counts.get("FETCH_ALL") == 1
 
 
 @pytest.mark.parametrize(
@@ -110,7 +111,7 @@ async def test_fetch_with_index_success(
     assert mock_request_weather.call_args[0] == (mock_lat, mock_lon)
     assert isinstance(results, tuple)
     assert results == (mock_index, {"test": "weather_data"})
-    assert log_counts.get("FETCH_WITH_INDEX")
+    assert log_counts.get("FETCH_WITH_INDEX") == 1
 
 
 @pytest.mark.asyncio
@@ -131,5 +132,5 @@ async def test_fetch_cache_missed_success(
 
     assert mock_fetch_with_index.call_count == len(missed_coords)
     assert results == TEST_EXPECTED_RESULTS
-    assert log_counts.get("INFO")
-    assert log_counts.get("SUCCESS")
+    assert log_counts.get("INFO") == 1
+    assert log_counts.get("SUCCESS") == 1
