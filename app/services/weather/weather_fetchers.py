@@ -11,11 +11,12 @@ from app.exceptions.api import (
     APIConnectionException,
     APIBadStatusCode,
 )
+from app.models.weather_model import WeatherModel
 from app.services.cache_service import cache_set
 from app.exceptions.exception_handlers import handle_api_error
 from app.utils.logger_helper import handle_log
 from app.services.weather.weather_builders import batcher
-from app.schemas.weather_schemas import OpenWeatherSchema
+from app.schemas.weather_schemas import OpenWeatherSchema, WeatherSchema
 
 from config import Config
 
@@ -57,9 +58,6 @@ async def request_weather(lat: float, lon: float) -> Dict[str, Any]:
                 resp.raise_for_status()
 
                 data = validator.load(resp.json())
-
-                cache_set(f"{lat},{lon}", resp.text, ttl=300)  # 5 min cache
-                cache_set(str(data["name"]), (lat, lon), ttl=300)
 
                 handle_log(
                     f"OPENWEATHER request successful for coords: {lat}, {lon}",
@@ -169,8 +167,8 @@ async def fetch_all(loc_list: List[Tuple[float, float]]) -> List[Dict[str, Any]]
 
 
 async def fetch_cache_missed(
-    missed_coords: List[Tuple[int, Tuple]], cached_list: List[Dict]
-) -> List[Dict]:
+    missed_coords: List[Tuple[int, Tuple]], cached_list: List[WeatherModel]
+) -> List[WeatherModel]:
     """Function to fetch weather data for partial missing coordinates in cache"""
     handle_log(
         "Fetching missing coordinates from API",
@@ -185,7 +183,11 @@ async def fetch_cache_missed(
         response = await asyncio.gather(*tasks)
     # process results
     for idx, weather_data in response:
-        cached_list[idx] = weather_data
+        weather_model = WeatherModel(weather_data)
+        lat, lon = weather_model.coord.values()
+        cache_data = WeatherSchema().dump(weather_model)
+        cache_set(f"{lat},{lon}", cache_data, ttl=300)  # 5 min cache
+        cached_list[idx] = weather_model
     handle_log(
         "Fetch missing coords completed",
         log_level="info",

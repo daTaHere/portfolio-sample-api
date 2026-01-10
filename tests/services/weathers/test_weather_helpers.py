@@ -11,56 +11,79 @@ Tests cover:
 import pytest
 from unittest.mock import patch
 
+from app.schemas.weather_schemas import WeatherSchema
 from app.services.weather.weather_fetchers import (
     fetch_all,
     fetch_cache_missed,
     fetch_with_index,
 )
+from tests.services.weathers.test_mock_weather_data import (
+    DEFAULT_WEATHER_CITIES,
+    mock_weather_expected_data,
+)
+from app.models.weather_model import WeatherModel
 
 from tests.utils import count_log_events
 
-DEFAULT_COORDS_LIST = [
-    (42.35, -71.05),
-    (34.05, -118.24),
-    (40.71, -74.0),
-    (41.87, -87.62),
-    (29.76, -95.36),
-    (25.76, -80.19),
-    (51.51, -0.13),
-    (35.68, 139.69),
-    (39.9, 116.4),
-    (30.03, 31.23),
-]
 
 # Mock coordinates for testing cache misses
 TEST_MISSING_COORDS = [
     (0, (42.35, -71.05)),
     (2, (40.71, -74.0)),
-    (4, (29.76, -95.36)),
+    (4, (25.76, -80.19)),
 ]
 
 TEST_CACHE_LIST = [
-    {},
-    {"mocked_1": "data"},
-    {},
-    {"mocked_3": "data"},
-    {},
-    {"mocked_5": "data"},
+    None,
+    WeatherModel(mock_weather_expected_data("New York")),
+    None,
+    WeatherModel(mock_weather_expected_data("Houston")),
+    None,
+    WeatherModel(mock_weather_expected_data("London")),
 ]
 
 TEST_MOCKED_SIDE_EFFECTS = [
-    (0, {"mocked_0": "data"}),
-    (2, {"mocked_2": "data"}),
-    (4, {"mocked_4": "data"}),
+    (
+        0,
+        mock_weather_expected_data(
+            "Los Angeles",
+            lat=TEST_MISSING_COORDS[0][1][0],
+            lon=TEST_MISSING_COORDS[0][1][1],
+        ),
+    ),
+    (
+        2,
+        mock_weather_expected_data(
+            "Chicago",
+            lat=TEST_MISSING_COORDS[1][1][0],
+            lon=TEST_MISSING_COORDS[1][1][1],
+        ),
+    ),
+    (
+        4,
+        mock_weather_expected_data(
+            "Miami",
+            lat=TEST_MISSING_COORDS[2][1][0],
+            lon=TEST_MISSING_COORDS[2][1][1],
+        ),
+    ),
 ]
 
 TEST_EXPECTED_RESULTS = [
-    {"mocked_0": "data"},
-    {"mocked_1": "data"},
-    {"mocked_2": "data"},
-    {"mocked_3": "data"},
-    {"mocked_4": "data"},
-    {"mocked_5": "data"},
+    mock_weather_expected_data(
+        "Los Angeles",
+        lat=TEST_MISSING_COORDS[0][1][0],
+        lon=TEST_MISSING_COORDS[0][1][1],
+    ),
+    mock_weather_expected_data("New York"),
+    mock_weather_expected_data(
+        "Chicago", lat=TEST_MISSING_COORDS[1][1][0], lon=TEST_MISSING_COORDS[1][1][1]
+    ),
+    mock_weather_expected_data("Houston"),
+    mock_weather_expected_data(
+        "Miami", lat=TEST_MISSING_COORDS[2][1][0], lon=TEST_MISSING_COORDS[2][1][1]
+    ),
+    mock_weather_expected_data("London"),
 ]
 
 
@@ -75,14 +98,14 @@ async def test_fetch_all_success(
     captured_logs,
     mock_request_weather,
 ):
-    results = await fetch_all(DEFAULT_COORDS_LIST)
+    results = await fetch_all(DEFAULT_WEATHER_CITIES)
     actual_args = [c.args for c in mock_request_weather.call_args_list]
 
     log_counts = count_log_events(captured_logs, "fetch_all")
 
-    assert mock_request_weather.call_count == len(DEFAULT_COORDS_LIST)
-    assert actual_args == DEFAULT_COORDS_LIST
-    assert len(results) == len(DEFAULT_COORDS_LIST)
+    assert mock_request_weather.call_count == len(DEFAULT_WEATHER_CITIES)
+    assert actual_args == DEFAULT_WEATHER_CITIES
+    assert len(results) == len(DEFAULT_WEATHER_CITIES)
     assert log_counts.get("FETCH_ALL") == 1
 
 
@@ -131,6 +154,21 @@ async def test_fetch_cache_missed_success(
     log_counts = count_log_events(captured_logs, "fetch_cache_missed")
 
     assert mock_fetch_with_index.call_count == len(missed_coords)
-    assert results == TEST_EXPECTED_RESULTS
+    assert all(isinstance(res, WeatherModel) for res in results)
+    assert (
+        results[0].name == "Los Angeles"
+        and results[0].coord["lat"] == 42.35
+        and results[0].coord["lon"] == -71.05
+    )
+    assert (
+        results[2].name == "Chicago"
+        and results[2].coord["lat"] == 40.71
+        and results[2].coord["lon"] == -74.0
+    )
+    assert (
+        results[4].name == "Miami"
+        and results[4].coord["lat"] == 25.76
+        and results[4].coord["lon"] == -80.19
+    )
     assert log_counts.get("INFO") == 1
     assert log_counts.get("SUCCESS") == 1

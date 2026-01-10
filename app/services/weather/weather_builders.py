@@ -3,11 +3,14 @@ This module contains the weather builders responsible for preparing
 weather data for fetching and processing.
 """
 
-from typing import Dict, Generator, List, Tuple
+from typing import Any, Dict, Generator, List, Tuple
+from marshmallow import ValidationError
 
 from app.services.cache_service import cache_get
 from app.utils.logger_helper import handle_log
-from app.schemas.weather_schemas import OpenWeatherSchema
+from app.schemas.weather_schemas import OpenWeatherSchema, WeatherSchema
+from app.models.weather_model import WeatherModel
+from app.services.cache_service import cache_get, cache_set
 
 DEFAULT_CITIES = [
     (34.05, -118.24),  # LA
@@ -115,7 +118,7 @@ def process_from_cache(loc_list: List[float]) -> Tuple[List[Dict], List[Tuple]]:
         cache_key = f"{lat},{lon}"
         cached = cache_get(cache_key)
         if cached:
-            cached_results[i] = OpenWeatherSchema().loads(cached)
+            cached_results[i] = WeatherSchema().load(cached)
         else:
             missing_coords.append((i, (lat, lon)))
 
@@ -129,3 +132,40 @@ def process_from_cache(loc_list: List[float]) -> Tuple[List[Dict], List[Tuple]]:
     )
 
     return cached_results, missing_coords
+
+
+def create_weather_model(weather_data: List[Dict[str, Any]]) -> List[WeatherModel]:
+    """Validate and create WeatherModel instances from raw weather data list."""
+    handle_log(
+        "Creating WeatherModel instances from weather data.",
+        log_level="info",
+        event_key="INFO",
+        service_method="create_weather_model",
+    )
+    weather_models = []
+    try:
+        for item in weather_data:
+            weather_instance = WeatherModel(item)
+            lat, lon = weather_instance.coord.values()
+            cache_set(
+                f"{lat},{lon}",
+                WeatherSchema().dump(weather_instance),
+                ttl=200,
+            )
+            weather_models.append(weather_instance)
+        handle_log(
+            "WeatherModel instances created successfully.",
+            log_level="info",
+            event_key="SUCCESS",
+            service_method="create_weather_model",
+            count=len(weather_models),
+        )
+        return weather_models
+    except (ValidationError, AttributeError) as e:
+        handle_log(
+            "Validation error creating WeatherModel instances.",
+            log_level="error",
+            event_key="VALIDATION_ERROR",
+            service_method="create_weather_model",
+            error=str(e),
+        )
