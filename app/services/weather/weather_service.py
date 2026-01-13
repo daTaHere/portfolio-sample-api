@@ -14,6 +14,8 @@ from app.services.weather.weather_builders import (
     create_weather_model,
 )
 from app.schemas.weather_schemas import WeatherSchema
+from app.services.cache_service import cache_set
+from app.dto.weather.weather_coords_cache_schema import WeatherCoordsCacheSchema
 
 _logger = debug_logger("weather_service")
 
@@ -43,6 +45,7 @@ async def get_current_weather(coords: List[float] | None) -> Dict[str, Any]:
                 service_method="get_current_weather",
             )
             user_coords = canonicalize_coords(coords)
+
         fetch_loc = create_fetch_list(user_coords)
         results, missing_coords = process_from_cache(fetch_loc)
 
@@ -57,7 +60,7 @@ async def get_current_weather(coords: List[float] | None) -> Dict[str, Any]:
                 event_key="HIT_ALL_CACHE",
                 service_method="get_current_weather",
             )
-            return WeatherSchema(many=True).dump(results)
+            return results
         elif len(missing_coords) == len(fetch_loc):
             # if len(missing_coords) == len(fetch_loc):
             _logger.debug(

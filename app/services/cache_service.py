@@ -7,6 +7,7 @@ from app.clients.redis_client import redis_client
 
 from app.utils.logger_helper import handle_log
 from concurrent.futures import ThreadPoolExecutor
+from app.schemas.weather_schemas import WeatherSchema
 
 
 executor = ThreadPoolExecutor(max_workers=5)

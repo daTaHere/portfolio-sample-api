@@ -6,11 +6,12 @@ weather data for fetching and processing.
 from typing import Any, Dict, Generator, List, Tuple
 from marshmallow import ValidationError
 
-from app.services.cache_service import cache_get
+from app.services.cache_service import cache_get, cache_set
 from app.utils.logger_helper import handle_log
 from app.schemas.weather_schemas import OpenWeatherSchema, WeatherSchema
 from app.models.weather_model import WeatherModel
 from app.services.cache_service import cache_get, cache_set
+from app.dto.weather.weather_coords_cache_schema import WeatherCoordsCacheSchema
 
 DEFAULT_CITIES = [
     (34.05, -118.24),  # LA
@@ -92,7 +93,9 @@ def create_fetch_list(user_coords: List[float] | None) -> List[Tuple[float, floa
     return fetch_loc
 
 
-def process_from_cache(loc_list: List[float]) -> Tuple[List[Dict], List[Tuple]]:
+def process_from_cache(
+    loc_list: List[Tuple[float, float]],
+) -> Tuple[List[Dict], List[Tuple[float, float]]]:
     """
     Process location list against cache, returning cached results and missing coords.
     Args:
@@ -130,6 +133,12 @@ def process_from_cache(loc_list: List[float]) -> Tuple[List[Dict], List[Tuple]]:
         missing_count=len(missing_coords),
         cached_count=len(loc_list) - len(missing_coords),
     )
+    if len(missing_coords):
+        cache_set(
+            "weather_coords_list",
+            WeatherCoordsCacheSchema().dumps({"coords": loc_list}),
+            ttl=200,
+        )
 
     return cached_results, missing_coords
 
