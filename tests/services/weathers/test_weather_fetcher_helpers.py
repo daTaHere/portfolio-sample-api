@@ -11,18 +11,16 @@ Tests cover:
 import pytest
 from unittest.mock import patch
 
-from app.schemas.weather_schemas import WeatherSchema
+from app.models.weather_model import WeatherModel
+from tests.services.weathers.test_mock_weather_data import (
+    DEFAULT_WEATHER_CITIES,
+    mock_weather_expected_data,
+)
 from app.services.weather.weather_fetchers import (
     fetch_all,
     fetch_cache_missed,
     fetch_with_index,
 )
-from tests.services.weathers.test_mock_weather_data import (
-    DEFAULT_WEATHER_CITIES,
-    mock_weather_expected_data,
-)
-from app.models.weather_model import WeatherModel
-
 from tests.utils import count_log_events
 
 

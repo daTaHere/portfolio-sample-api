@@ -2,18 +2,14 @@
 
 import requests
 from flask import request
-from typing import Any, Dict, List, Tuple
+from typing import List, Tuple
 
-from app.exceptions.base import APIException, ServiceException
-from app.exceptions.exception_handlers import handle_route_error
-from app.utils.route_utils import handle_route_response
 from app.utils.logger_helper import handle_log, debug_logger
-
 
 _logger = debug_logger("weather_validators")
 
 
-def get_client_location() -> list[float]:
+def get_client_location() -> List[float]:
     """Extract client-provided lat/lon from query parameters."""
     lat = request.args.get("lat")
     lon = request.args.get("lon")
@@ -107,12 +103,12 @@ def validate_coords_key() -> List[float] | None:
 
 
 def truncate(value: float, decimals: int = 3) -> float:
-    """Format cordinates to fixed decimal. Default prescision is 3 decimals."""
+    """Format coordinates to fixed decimal. Default precision is 3 decimals."""
     factor = 10**decimals
     return int(value * factor) / factor
 
 
-# --- Tructaete location data to 1 decimal to reduce cache size ---
+# --- Truncate location data to 3 decimals to ensure city level accuracy ---
 def canonicalize_coords(coords: List[float]) -> Tuple[float, float] | None:
     """Validate range and format coordinates to 3 decimal places."""
     handle_log(

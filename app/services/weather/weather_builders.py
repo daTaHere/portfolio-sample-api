@@ -6,17 +6,17 @@ weather data for fetching and processing.
 from typing import Any, Dict, Generator, List, Tuple
 from marshmallow import ValidationError
 
-from app.services.cache_service import cache_get, cache_set
-from app.utils.logger_helper import handle_log
-from app.schemas.weather_schemas import WeatherSchema
-from app.models.weather_model import WeatherModel
-from app.services.cache_service import cache_get, cache_set
 from app.dto.weather.weather_coords_cache_schema import WeatherCoordsCacheSchema
+from app.exceptions.exception_handlers import handle_service_errorV2
 from app.exceptions.service import (
     ServiceInternalException,
     ServiceValidationException,
 )
-from app.exceptions.exception_handlers import handle_service_errorV2
+from app.models.weather_model import WeatherModel
+from app.services.cache_service import cache_get, cache_set
+from app.schemas.weather_schemas import WeatherSchema
+from app.utils.logger_helper import handle_log
+
 
 DEFAULT_CITIES = [
     (34.05, -118.24),  # LA

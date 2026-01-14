@@ -6,17 +6,12 @@ Routes are a fully asynchronous implementation with 3rd party API integration, c
 
 from flask import Blueprint
 
-from app.exceptions.base import APIException, ServiceException
-from app.exceptions.exception_handlers import handle_route_error
 from app.exceptions.api import APIConnectionException, APITimeoutException
 
 from app.services.weather import get_current_weather
-
+from app.services.weather.weather_validators import validate_coords_key
 from app.utils.route_utils import handle_route_response
 from app.utils.logger_helper import debug_logger, handle_log
-
-from app.services.weather.weather_validators import validate_coords_key
-
 
 weather_bp = Blueprint("weather", __name__)
 _logger = debug_logger("weather_routes")
@@ -25,7 +20,7 @@ _logger = debug_logger("weather_routes")
 @weather_bp.route("/weather", methods=["GET"])
 async def get_weather():
     """
-    Weather route handler for current weather data requsted from OPENWEATHER API.
+    Weather route handler for current weather data requested from OPENWEATHER API.
     Returns weather for client location + 9 default cities.
     - Attempts to use provided lat/lon query params.
     - Falls back to IP geolocation if params are missing.
@@ -46,7 +41,7 @@ async def get_weather():
                 "No weather data found for requested locations.",
                 log_level="error",
                 event_key="NOT_FOUND",
-                service_method="get_weather ",
+                service_method="get_weather",
             )
             return handle_route_response(True, "Not Found", 404)
         return handle_route_response(True, response, 200)

@@ -1,5 +1,4 @@
-from typing import Any, Dict, List, Tuple
-
+from typing import Any, Dict
 
 DEFAULT_WEATHER_CITIES = [
     (34.05, -118.24),  # LA

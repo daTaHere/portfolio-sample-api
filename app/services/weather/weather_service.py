@@ -14,8 +14,6 @@ from app.services.weather.weather_builders import (
     create_weather_model,
 )
 from app.schemas.weather_schemas import WeatherSchema
-from app.services.cache_service import cache_set
-from app.dto.weather.weather_coords_cache_schema import WeatherCoordsCacheSchema
 
 _logger = debug_logger("weather_service")
 
@@ -102,6 +100,7 @@ async def get_current_weather(coords: List[float] | None) -> Dict[str, Any]:
         )
         return WeatherSchema(many=True).dump(results)
     except (ValueError, TypeError) as e:
+        """Fix exception handler later"""
         _logger.exception(
             "Error in /weather", extra={"service_method": "get_current_weather"}
         )

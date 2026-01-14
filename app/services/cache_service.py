@@ -2,7 +2,7 @@
 
 import json
 import os
-from typing import Any, Dict
+from typing import Any
 from app.clients.redis_client import redis_client
 
 from app.utils.logger_helper import handle_log

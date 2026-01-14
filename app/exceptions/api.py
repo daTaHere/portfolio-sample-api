@@ -1,10 +1,10 @@
 """This module defines custom exceptions for transport layer errors."""
 
-from app.exceptions.base import APIException, APIExceptionV2
+from app.exceptions.base import APIExceptionV2
 
 
 class APIBadStatusCode(APIExceptionV2):
-    """Exception to handle a bad reponse code from client."""
+    """Exception to handle a bad response code from client."""
 
     def __init__(
         self,
@@ -18,7 +18,7 @@ class APIBadStatusCode(APIExceptionV2):
 
 
 class APITimeoutException(APIExceptionV2):
-    """Exception to handle timeout excpetion from client."""
+    """Exception to handle timeout exception from client."""
 
     def __init__(
         self,
@@ -36,7 +36,7 @@ class APIConnectionException(APIExceptionV2):
 
     def __init__(
         self,
-        message: str = "Unreachable resource: Host Connection can not be estblished",
+        message: str = "Unreachable resource: Host Connection cannot be established",
         service_name: str = None,
         **kwargs
     ):
