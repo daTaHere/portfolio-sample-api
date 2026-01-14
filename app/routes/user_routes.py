@@ -5,7 +5,7 @@ HTTP endpoints for user operations.
 
 from flask import Blueprint, request, jsonify
 from app import logger
-from app.services.user_service import get_all_users, create_user
+from app.services.users import create_user, get_all_users
 
 
 user_bp = Blueprint("users", __name__)
