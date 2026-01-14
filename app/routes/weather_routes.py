@@ -4,8 +4,7 @@ Routes are a fully asynchronous implementation with 3rd party API integration, c
 
 """
 
-from flask import Blueprint, request
-from typing import Any, Dict, List, Tuple
+from flask import Blueprint
 
 from app.exceptions.base import APIException, ServiceException
 from app.exceptions.exception_handlers import handle_route_error
@@ -16,7 +15,7 @@ from app.services.weather import get_current_weather
 from app.utils.route_utils import handle_route_response
 from app.utils.logger_helper import debug_logger, handle_log
 
-from app.services.weather.weather_validators import get_client_location, geo_ip_lookup
+from app.services.weather.weather_validators import validate_coords_key
 
 
 weather_bp = Blueprint("weather", __name__)
@@ -38,23 +37,8 @@ async def get_weather():
         event_key="REQUESTED",
         service_method="get_weather ",
     )
-    if request.args:
-        handle_log(
-            "Client provided current location coordinates.",
-            log_level="info",
-            event_key="CLIENT_COORDS",
-            service_method="get_weather ",
-        )
-        coords = get_client_location()
-    else:
-        handle_log(
-            "Attempting to geolocate by IP.",
-            log_level="info",
-            event_key="IP_GEOLOOKUP",
-            service_method="get_weather ",
-        )
-        coords = geo_ip_lookup()
 
+    coords = validate_coords_key()
     try:
         response = await get_current_weather(coords)
         if len(response) == 0:

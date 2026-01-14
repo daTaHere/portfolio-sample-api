@@ -33,24 +33,3 @@ def fetch_weather_updates():
         )
 
     asyncio.run(_runner())
-
-
-# def fetch_weather_updates():
-#     """Wrapper to run async batch in scheduler"""
-#     cache_loc_list = cache_get("weather_coords_list") or DEFAULT_CITIES
-#     cleaned_coords = WeatherCoordsCacheSchema().load(cache_loc_list.json())
-
-#     print("cleaned_coords:", cleaned_coords, flush=True)
-
-#     async def _runner():
-
-#         fresh_data = await fetch_all(WeatherCoordsCacheSchema().load(cache_loc_list))
-#         fresh_models = create_weather_model(fresh_data)
-
-#         cities_update = {"cities": [str(data.name) for data in fresh_models]}
-#         _logger.debug(
-#             f"Fetched weather updates for cities: {cities_update['cities']}",
-#             extra={"service_method": "fetch_weather_updates"},
-#         )
-
-#     asyncio.run(_runner())

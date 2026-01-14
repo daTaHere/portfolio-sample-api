@@ -8,10 +8,15 @@ from marshmallow import ValidationError
 
 from app.services.cache_service import cache_get, cache_set
 from app.utils.logger_helper import handle_log
-from app.schemas.weather_schemas import OpenWeatherSchema, WeatherSchema
+from app.schemas.weather_schemas import WeatherSchema
 from app.models.weather_model import WeatherModel
 from app.services.cache_service import cache_get, cache_set
 from app.dto.weather.weather_coords_cache_schema import WeatherCoordsCacheSchema
+from app.exceptions.service import (
+    ServiceInternalException,
+    ServiceValidationException,
+)
+from app.exceptions.exception_handlers import handle_service_errorV2
 
 DEFAULT_CITIES = [
     (34.05, -118.24),  # LA
@@ -80,9 +85,6 @@ def create_fetch_list(user_coords: List[float] | None) -> List[Tuple[float, floa
         idx = fetch_loc.index(user_coords)
         fetch_loc[0], fetch_loc[idx] = fetch_loc[idx], fetch_loc[0]
 
-    # placeholder: later caching strategy for location list integrating specific user loc list via session-token,cookie,etc.
-    # cache_set("weather_coords_list", fetch_loc, ttl=600)
-
     handle_log(
         "Location list 'FINALIZED' and cached.",
         log_level="info",
@@ -120,9 +122,20 @@ def process_from_cache(
     for i, (lat, lon) in enumerate(loc_list):
         cache_key = f"{lat},{lon}"
         cached = cache_get(cache_key)
-        if cached:
+        if not cached:
+            missing_coords.append((i, (lat, lon)))
+            continue
+        try:
             cached_results[i] = WeatherSchema().load(cached)
-        else:
+        except (ValidationError, TypeError, ValueError) as e:
+            handle_log(
+                "Cache deserialization error.",
+                log_level="warning",
+                event_key="CACHE_DESERIALIZATION_ERROR",
+                service_method="process_from_cache",
+                coords=(lat, lon),
+                error=str(e),
+            )
             missing_coords.append((i, (lat, lon)))
 
     handle_log(
@@ -136,7 +149,7 @@ def process_from_cache(
     if len(missing_coords):
         cache_set(
             "weather_coords_list",
-            WeatherCoordsCacheSchema().dumps({"coords": loc_list}),
+            WeatherCoordsCacheSchema().dump({"coords": loc_list}),
             ttl=200,
         )
 
@@ -156,9 +169,10 @@ def create_weather_model(weather_data: List[Dict[str, Any]]) -> List[WeatherMode
         for item in weather_data:
             weather_instance = WeatherModel(item)
             lat, lon = weather_instance.coord.values()
+            valid_data = WeatherSchema().dump(weather_instance)
             cache_set(
                 f"{lat},{lon}",
-                WeatherSchema().dump(weather_instance),
+                valid_data,
                 ttl=200,
             )
             weather_models.append(weather_instance)
@@ -170,11 +184,19 @@ def create_weather_model(weather_data: List[Dict[str, Any]]) -> List[WeatherMode
             count=len(weather_models),
         )
         return weather_models
-    except (ValidationError, AttributeError) as e:
-        handle_log(
-            "Validation error creating WeatherModel instances.",
-            log_level="error",
-            event_key="VALIDATION_ERROR",
+    except (ValueError, TypeError, AttributeError) as e:
+        handle_service_errorV2(
+            e,
+            "Internal Error: processing weather data into WeatherModel instances.",
+            exc_type=ServiceInternalException,
             service_method="create_weather_model",
-            error=str(e),
+            model="WeatherModel",
+        )
+    except ValidationError as e:
+        handle_service_errorV2(
+            e,
+            "Validation Error: while serializing weather data.",
+            exc_type=ServiceValidationException,
+            service_method="create_weather_model",
+            schema="WeatherSchema",
         )

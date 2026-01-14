@@ -10,6 +10,7 @@ from app.exceptions.api import (
     APITimeoutException,
     APIConnectionException,
     APIBadStatusCode,
+    APIValidationException,
 )
 from app.models.weather_model import WeatherModel
 from app.services.cache_service import cache_set
@@ -17,7 +18,7 @@ from app.exceptions.exception_handlers import handle_api_error
 from app.utils.logger_helper import handle_log
 from app.services.weather.weather_builders import batcher
 from app.schemas.weather_schemas import OpenWeatherSchema, WeatherSchema
-
+from app.exceptions.api import APIJSONDecodeException
 from config import Config
 
 MAX_RETRIES = 3
@@ -56,8 +57,8 @@ async def request_weather(lat: float, lon: float) -> Dict[str, Any]:
             try:
                 resp = await client.get(endpoint)
                 resp.raise_for_status()
-
-                data = validator.load(resp.json())
+                data = resp.json()
+                clean_data = validator.load(data)
 
                 handle_log(
                     f"OPENWEATHER request successful for coords: {lat}, {lon}",
@@ -67,7 +68,7 @@ async def request_weather(lat: float, lon: float) -> Dict[str, Any]:
                     service_method="request_weather",
                     endpoint=url,
                 )
-                return data
+                return clean_data
             except httpx.ConnectError as e:
                 wait_time = RETRY_BACKOFF_BASE * (2 ** (attempt - 1))
                 if attempt == MAX_RETRIES:
@@ -124,30 +125,27 @@ async def request_weather(lat: float, lon: float) -> Dict[str, Any]:
                     service_name="OpenWeatherMap API",
                     service_method="request_weather",
                 )
-            except ValidationError as e:
-                handle_log(
-                    "Validation Error: Invalid data format received from OpenWeatherMap API.",
-                    method="GET",
-                    event_key="ERROR",
-                    log_level="error",
-                    service_method="request_weather",
-                    service_name="OpenWeatherMap_API",
-                    endpoint=url,
-                    error=str(e),
-                )
-                return {}
             except (TypeError, ValueError) as e:
-                handle_log(
-                    "Value/Type Error: Invalid data type received from response",
+                handle_api_error(
+                    e,
+                    "Bad response data received from OpenWeatherMap API.",
+                    exc_type=APIJSONDecodeException,
+                    url=url,
                     method="GET",
-                    event_key="ERROR",
-                    log_level="error",
-                    service_method="request_weather",
                     service_name="OpenWeatherMap_API",
-                    endpoint=url,
-                    error=str(e),
+                    service_method="request_weather",
                 )
-                return {}
+            except ValidationError as e:
+                handle_api_error(
+                    e,
+                    "Validation Error: Invalid data format received from OpenWeatherMap API.",
+                    exc_type=APIValidationException,
+                    url=url,
+                    method="GET",
+                    service_name="OpenWeatherMap_API",
+                    service_method="request_weather",
+                    schema="OpenWeatherSchema",
+                )
 
 
 async def fetch_all(loc_list: List[Tuple[float, float]]) -> List[Dict[str, Any]]:
@@ -164,6 +162,21 @@ async def fetch_all(loc_list: List[Tuple[float, float]]) -> List[Dict[str, Any]]
         tasks = [request_weather(lat, lon) for lat, lon in batch]
         results.extend(await asyncio.gather(*tasks))
     return results
+
+
+async def fetch_with_index(
+    idx: int, lat: float, lon: float
+) -> Tuple[int, Dict[str, Any]]:
+    """Helper to fetch weather data and preserve list order"""
+    handle_log(
+        f"Fetch missing coord at index {idx}: {lat}, {lon}",
+        method="GET",
+        event_key="FETCH_WITH_INDEX",
+        log_level="info",
+        service_method="fetch_with_index",
+    )
+    data = await request_weather(lat, lon)
+    return idx, data
 
 
 async def fetch_cache_missed(
@@ -196,18 +209,3 @@ async def fetch_cache_missed(
         service_name="OpenWeatherMap_API",
     )
     return cached_list
-
-
-async def fetch_with_index(
-    idx: int, lat: float, lon: float
-) -> Tuple[int, Dict[str, Any]]:
-    """Helper to fetch weather data and preserve list order"""
-    handle_log(
-        f"Fetch missing coord at index {idx}: {lat}, {lon}",
-        method="GET",
-        event_key="FETCH_WITH_INDEX",
-        log_level="info",
-        service_method="fetch_with_index",
-    )
-    data = await request_weather(lat, lon)
-    return idx, data

@@ -68,7 +68,7 @@ def create_app(config_name=None):
 
     scheduler = BackgroundScheduler()
     # Add jobs here, e.g.:
-    scheduler.add_job(func=fetch_weather_updates, trigger="interval", seconds=58)
+    scheduler.add_job(func=fetch_weather_updates, trigger="interval", minutes=52)
     scheduler.start()
 
     # Create database tables

@@ -7,8 +7,11 @@ Covers:
 - Asynchronous HTTP request mocking with respx.
 """
 
+import pytest
 from unittest.mock import patch
 from typing import List, Tuple
+
+from marshmallow import ValidationError
 
 from app.models.weather_model import WeatherModel
 from app.services.weather.weather_builders import (
@@ -16,6 +19,9 @@ from app.services.weather.weather_builders import (
     process_from_cache,
     create_weather_model,
 )
+from app.schemas.weather_schemas import WeatherSchema
+from app.exceptions.service import ServiceInternalException, ServiceValidationException
+
 from tests.utils import count_log_events
 from tests.services.weathers.test_mock_weather_data import (
     DEFAULT_WEATHER_CITIES,
@@ -23,7 +29,6 @@ from tests.services.weathers.test_mock_weather_data import (
     mock_weather_expected_data,
 )
 
-from app.schemas.weather_schemas import WeatherSchema
 
 MOCK_CREATE_MODEL_INPUT = [
     mock_weather_input_test_data("Los Angeles"),
@@ -151,14 +156,49 @@ def test_create_weather_model_success(captured_logs):
     assert log_counts.get("SUCCESS") == 1
 
 
-def test_create_weather_model_from_schema(captured_logs):
+@pytest.mark.parametrize(
+    "mock_error",
+    [
+        ValueError("Invalid data"),
+        AttributeError("Invalid data"),
+        TypeError("Invalid data"),
+    ],
+)
+def test_create_weather_model_raise_service_internal_exception(
+    mock_error: Exception, captured_logs
+):
 
-    test_data = [{"test": "Validation Error"}]
-    with patch("app.services.cache_service.cache_set", return_value=None):
-        create_weather_model(test_data)
+    test_data = [{"lon": 123.45, "lat": 67.89}]
+
+    with pytest.raises(ServiceInternalException) as exc_info:
+        with patch(
+            "app.services.weather.weather_builders.WeatherModel",
+            side_effect=mock_error,
+        ):
+            create_weather_model(test_data)
 
     log_counts = count_log_events(captured_logs, "create_weather_model")
 
     assert log_counts.get("INFO") == 1
-    assert log_counts.get("VALIDATION_ERROR") == 1
+    assert log_counts.get("ERROR") == 1
     assert not log_counts.get("SUCCESS")
+    assert "Internal Error:" in str(exc_info.value)
+
+
+def test_create_weather_model_raise_service_validation_exception(captured_logs):
+
+    test_data = MOCK_CREATE_MODEL_INPUT
+
+    with pytest.raises(ServiceValidationException) as exc_info:
+        with patch(
+            "app.services.weather.weather_builders.WeatherSchema.dump",
+            side_effect=ValidationError("Invalid data"),
+        ):
+            create_weather_model(test_data)
+
+    log_counts = count_log_events(captured_logs, "create_weather_model")
+
+    assert log_counts.get("INFO") == 1
+    assert log_counts.get("ERROR") == 1
+    assert not log_counts.get("SUCCESS")
+    assert "Validation Error:" in str(exc_info.value)

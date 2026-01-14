@@ -62,7 +62,6 @@ async def get_current_weather(coords: List[float] | None) -> Dict[str, Any]:
             )
             return results
         elif len(missing_coords) == len(fetch_loc):
-            # if len(missing_coords) == len(fetch_loc):
             _logger.debug(
                 "===  ?????  ???? MISSED ON ALL on cache. ??????    ===",
                 extra={"service_method": "get_current_weather"},

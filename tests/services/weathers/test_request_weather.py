@@ -18,7 +18,9 @@ from app.services.weather.weather_fetchers import request_weather
 from app.exceptions.api import (
     APIBadStatusCode,
     APIConnectionException,
+    APIJSONDecodeException,
     APITimeoutException,
+    APIValidationException,
 )
 from tests.utils import count_log_events
 
@@ -202,56 +204,49 @@ async def test_request_weather_raises_bad_status_code_exception(
 
 
 @pytest.mark.parametrize(
-    "invalid_schema",
-    [[], "invalid schema", 123, None, {"unexpected": "data"}],
+    "invalid_response",
+    [None, b"<html>not json</html>"],
 )
 @pytest.mark.asyncio
 @respx.mock
-async def test_request_weather_validation_error_log_error(
-    captured_logs, invalid_schema: Any
+async def test_request_weather_raises_api_bad_response_exception(
+    captured_logs, invalid_response: Any
 ):
     respx.get(url__regex=r"https://api\.openweathermap\.org/data/2\.5/weather.*").mock(
-        return_value=httpx.Response(200, json={"data": invalid_schema})
+        return_value=httpx.Response(200, content=invalid_response)
     )
 
     lat, lon = 34.05, -118.24
-    with patch.object(httpx.Response, "json", return_value=invalid_schema):
-        data = await request_weather(lat, lon)
+    with pytest.raises(APIJSONDecodeException) as exc_info:
+        await request_weather(lat, lon)
 
     log_counts = count_log_events(captured_logs, "request_weather")
 
-    assert data == {}
     assert not log_counts.get("RETRIES")
     assert not log_counts.get("SUCCESS")
     assert log_counts.get("ERROR") == 1
-    assert any("Validation Error" in log["event"] for log in captured_logs)
+    assert "JSONDecode Error:" in str(exc_info.value)
 
 
-@pytest.mark.parametrize(
-    "mock_error",
-    [ValueError("Invalid data format"), TypeError("Type mismatch")],
-)
 @pytest.mark.asyncio
 @respx.mock
-async def test_request_weather_value_or_type_error_log_error(
-    captured_logs, mock_error: Exception
-):
-
+async def test_request_weather_raises_api_validation_exception(captured_logs):
+    mock_response = {
+        "id": 282828,
+        "main": "Invalid Main Data",
+        "name": "Los Angeles",
+    }
     respx.get(url__regex=r"https://api\.openweathermap\.org/data/2\.5/weather.*").mock(
-        return_value=httpx.Response(200, json=TEST_RESPONSE_TEMPLATE)
+        return_value=httpx.Response(200, json=mock_response)
     )
 
     lat, lon = 34.05, -118.24
-    with patch(
-        "app.services.weather.weather_fetchers.OpenWeatherSchema.load",
-        side_effect=mock_error,
-    ):
-        data = await request_weather(lat, lon)
+    with pytest.raises(APIValidationException) as exc_info:
+        await request_weather(lat, lon)
 
     log_counts = count_log_events(captured_logs, "request_weather")
 
-    assert data == {}
     assert not log_counts.get("RETRIES")
     assert not log_counts.get("SUCCESS")
     assert log_counts.get("ERROR") == 1
-    assert any("Value/Type Error" in log["event"] for log in captured_logs)
+    assert "Validation Error:" in str(exc_info.value)

@@ -45,6 +45,34 @@ class APIConnectionException(APIExceptionV2):
         super().__init__(message=message, **kwargs)
 
 
+class APIJSONDecodeException(APIExceptionV2):
+    """Exception to handle JSON decode errors from external API."""
+
+    def __init__(
+        self,
+        message: str = "JSONDecode Error: Received bad response from external API",
+        service_name: str = None,
+        **kwargs
+    ):
+
+        self.service_name = service_name
+        super().__init__(message=message, **kwargs)
+
+
+class APIValidationException(APIExceptionV2):
+    """Exception to handle response validation errors from external API."""
+
+    def __init__(
+        self,
+        message: str = "Validation Error: Received invalid data from external API",
+        service_name: str = None,
+        **kwargs
+    ):
+
+        self.service_name = service_name
+        super().__init__(message=message, **kwargs)
+
+
 class ExternalAPIConnectionError(Exception):
     """
     Raised when a service fails to reach an external API.

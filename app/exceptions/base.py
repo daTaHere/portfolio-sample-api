@@ -44,13 +44,25 @@ class ServiceException(Exception):
         method: str,
         model: str = None,
         key: str = None,
-        original_exception: Exception = None,
+        # original_exception: Exception = None,
     ):
         self.endpoint = endpoint
         self.model = model
         self.method = method
         self.key = key
-        self.original_exception = original_exception
+        # self.original_exception = original_exception
+        super().__init__(message)
+
+
+class ServiceExceptionV2(Exception):
+    """Base exception for service / business logic errors."""
+
+    def __init__(
+        self,
+        message: str,
+        service_method: str,
+    ):
+        self.service_method = service_method
         super().__init__(message)
 
 
