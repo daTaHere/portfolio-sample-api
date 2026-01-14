@@ -44,13 +44,11 @@ class ServiceException(Exception):
         method: str,
         model: str = None,
         key: str = None,
-        # original_exception: Exception = None,
     ):
         self.endpoint = endpoint
         self.model = model
         self.method = method
         self.key = key
-        # self.original_exception = original_exception
         super().__init__(message)
 
 

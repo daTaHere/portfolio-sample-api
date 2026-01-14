@@ -122,7 +122,7 @@ async def request_weather(lat: float, lon: float) -> Dict[str, Any]:
                     exc_type=APIBadStatusCode,
                     url=url,
                     method="GET",
-                    service_name="OpenWeatherMap API",
+                    service_name="OpenWeatherMap_API",
                     service_method="request_weather",
                 )
             except (TypeError, ValueError) as e:

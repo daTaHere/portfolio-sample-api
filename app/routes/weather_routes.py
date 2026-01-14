@@ -30,7 +30,7 @@ async def get_weather():
         "Received request at /weather endpoint.",
         log_level="info",
         event_key="REQUESTED",
-        service_method="get_weather ",
+        service_method="get_weather",
     )
 
     coords = validate_coords_key()

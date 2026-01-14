@@ -66,7 +66,7 @@ def geo_ip_lookup() -> List[float] | None:
 def validate_coords_key() -> List[float] | None:
     """Return pair of coordinates else None."""
 
-    if request.args:
+    if request.args.get("lat") and request.args.get("lon"):
         _logger.debug(
             "===  $$$$$  CLIENT PROVIDED COORDS  $$$$$$    ===",
             extra={"service_method": "get_weather "},

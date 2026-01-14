@@ -24,7 +24,7 @@ class ServiceValidationException(ServiceExceptionV2):
 
     def __init__(
         self,
-        message: str = "Validation Error: invalidation data failed (de)serialization",
+        message: str = "Validation Error: invalid data failed (de)serialization",
         schema: Optional[str] = None,
         **kwargs
     ):

@@ -60,7 +60,7 @@ def mock_weather_expected_data(
     city_name: str, lat: float = 34.05, lon: float = -118.24
 ) -> Dict[str, Any]:
     """
-    Returns a object mocking expected processed weather data structure
+    Returns an object mocking expected processed weather data structure
         args:
             city_name (str): Name of the city to include in the mock data
             lat (float): Latitude of the city
