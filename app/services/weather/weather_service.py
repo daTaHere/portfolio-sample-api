@@ -4,7 +4,10 @@ for orchestrating weather data retrieval, caching, and processing.
 """
 
 from typing import Any, Dict, List
+from marshmallow import ValidationError
 
+from app.exceptions.exception_handlers import handle_service_errorV2
+from app.exceptions.service import ServiceInternalException, ServiceValidationException
 from app.utils.logger_helper import handle_log, debug_logger
 from app.services.weather.weather_validators import canonicalize_coords
 from app.services.weather.weather_fetchers import fetch_cache_missed, fetch_all
@@ -18,7 +21,7 @@ from app.schemas.weather_schemas import WeatherSchema
 _logger = debug_logger("weather_service")
 
 
-async def get_current_weather(coords: List[float] | None) -> Dict[str, Any]:
+async def get_current_weather(coords: List[float] | None) -> List[Dict[str, Any]]:
     """
     GET /weather?lat=..&lon=..
     Returns weather for requested location + default cities.
@@ -99,8 +102,19 @@ async def get_current_weather(coords: List[float] | None) -> Dict[str, Any]:
             service_method="get_current_weather",
         )
         return WeatherSchema(many=True).dump(results)
-    except (ValueError, TypeError) as e:
-        """Fix exception handler later"""
-        _logger.exception(
-            "Error in /weather", extra={"service_method": "get_current_weather"}
+    except (ValidationError, AttributeError) as e:
+        handle_service_errorV2(
+            e,
+            "Validation Error: failed to serialize weather results via WeatherSchema.",
+            exc_type=ServiceValidationException,
+            service_method="get_current_weather",
+            schema="WeatherSchema",
+        )
+    except (ValueError, TypeError, KeyError) as e:
+        handle_service_errorV2(
+            e,
+            "Internal Error: unexpected type/value/key while processing weather results.",
+            exc_type=ServiceInternalException,
+            service_name="WeatherService",
+            service_method="get_current_weather",
         )
