@@ -64,6 +64,9 @@ def mock_create_weather_model():
 #         yield mock
 
 
+# -------------------------------------------------
+#     get_current_weather success path tests
+# -------------------------------------------------
 @pytest.mark.asyncio
 async def test_get_current_weather_success_hit_all(
     mock_create_fetch_list, mock_process_from_cache, captured_logs
@@ -181,6 +184,9 @@ async def test_get_current_weather_success_partial_cache(
     assert log_counts["SUCCESS"] == 1
 
 
+# ---------------------------------------------------------------
+#     get_current_weather raise validation exception tests
+# ---------------------------------------------------------------
 @pytest.mark.parametrize(
     "exception",
     [ValidationError("invalid data"), AttributeError("missing attribute")],
@@ -223,6 +229,9 @@ async def test_get_current_weather_raise_ServiceValidationException(
     assert "Validation Error:" in str(exc_info.value)
 
 
+# ---------------------------------------------------------------
+#     get_current_weather raise internal exception tests
+# ---------------------------------------------------------------
 @pytest.mark.parametrize(
     "exception",
     [TypeError("invalid type"), ValueError("invalid value"), KeyError("missing key")],

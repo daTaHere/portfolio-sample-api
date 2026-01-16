@@ -7,13 +7,14 @@ Covers:
 - Asynchronous HTTP request mocking with respx.
 """
 
-from unittest.mock import patch
 from typing import Any, List
 
 import pytest
 import respx
 import httpx
+from marshmallow import ValidationError
 
+from app.services.weather import weather_fetchers
 from app.services.weather.weather_fetchers import request_weather
 from app.exceptions.api import (
     APIBadStatusCode,
@@ -27,63 +28,48 @@ from tests.utils import count_log_events
 
 BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
 
-TEST_RESPONSE_TEMPLATE = {
-    "base": "stations",
-    "clouds": {"all": 0},
-    "cod": 200,
-    "coord": {"lat": 34.05, "lon": -118.24},
-    "dt": 1767056264,
-    "id": 5368361,
-    "main": {
-        "feels_like": 291.45,
-        "grnd_level": 1000,
-        "humidity": 28,
-        "pressure": 1019,
-        "sea_level": 1019,
-        "temp": 292.71,
-        "temp_max": 294.68,
-        "temp_min": 291.36,
-    },
+TEST_INPUT = {"lat": 34.05, "lon": -118.24}
+
+TEST_RESPONSE = {
+    "id": 285,
     "name": "Los Angeles",
-    "sys": {
-        "country": "US",
-        "id": 2075946,
-        "sunrise": 1767020270,
-        "sunset": 1767055934,
-        "type": 2,
-    },
-    "timezone": -28800,
-    "visibility": 10000,
-    "weather": [
-        {"description": "clear sky", "icon": "01n", "id": 800, "main": "Clear"}
-    ],
-    "wind": {"deg": 338, "gust": 1.79, "speed": 0.45},
+    "coord": {"lat": 34.05, "lon": -118.24},
 }
 
 
-@pytest.fixture
-def mock_cache_set():
-    with patch("app.services.weather.weather_fetchers.cache_set") as mock:
-        yield mock
+@pytest.fixture(autouse=True)
+def mock_openweather_key(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.weather.weather_fetchers.Config.OPENWEATHER_API_KEY",
+        "test-api-key",
+    )
+
+
+@pytest.fixture(autouse=True)
+def mock_OpenWeatherSchema_load(monkeypatch, request):
+    if "skip_mock_OpenWeatherSchema_load" in request.keywords:
+        return
+    monkeypatch.setattr(
+        weather_fetchers.OpenWeatherSchema,
+        "load",
+        lambda self, x: x,
+    )
 
 
 @pytest.mark.asyncio
 @respx.mock
-async def test_request_weather_success(mock_cache_set, captured_logs):
-    respx.get(url__regex=r"https://api\.openweathermap\.org/data/2\.5/weather.*").mock(
-        return_value=httpx.Response(200, json=TEST_RESPONSE_TEMPLATE)
-    )
+async def test_request_weather_success(captured_logs):
+    mock_route = respx.get(
+        url__regex=r"https://api\.openweathermap\.org/data/2\.5/weather.*"
+    ).mock(return_value=httpx.Response(200, json=TEST_RESPONSE))
 
-    lat, lon = 34.05, -118.24
-    data = await request_weather(lat, lon)
-
+    data = await request_weather(**TEST_INPUT)
     log_counts = count_log_events(captured_logs, "request_weather")
+    called_request = mock_route.calls.last.request
 
-    # assert mock_cache_set.call_count == 2
-    assert isinstance(data, dict)
-    assert data["name"] == "Los Angeles"
-    assert data["coord"]["lat"] == lat
-    assert data["coord"]["lon"] == lon
+    assert called_request.url.params["lat"] == str(TEST_INPUT["lat"])
+    assert called_request.url.params["lon"] == str(TEST_INPUT["lon"])
+    assert data == TEST_RESPONSE
     assert not log_counts.get("RETRIES")
     assert log_counts.get("SUCCESS")
     assert not log_counts["ERROR"]
@@ -91,27 +77,24 @@ async def test_request_weather_success(mock_cache_set, captured_logs):
 
 @pytest.mark.asyncio
 @respx.mock
-async def test_request_weather_response_success_with_retries(
-    mock_cache_set, captured_logs
-):
-    respx.get(url__regex=r"https://api\.openweathermap\.org/data/2\.5/weather.*").mock(
+async def test_request_weather_response_success_with_retries(captured_logs):
+    mock_route = respx.get(
+        url__regex=r"https://api\.openweathermap\.org/data/2\.5/weather.*"
+    ).mock(
         side_effect=[
             httpx.ConnectTimeout("connection timeout"),
             httpx.TimeoutException("read timeout"),
-            httpx.Response(200, json=TEST_RESPONSE_TEMPLATE),
+            httpx.Response(200, json=TEST_RESPONSE),
         ]
     )
 
-    lat, lon = 34.05, -118.24
-    data = await request_weather(lat, lon)
-
+    data = await request_weather(**TEST_INPUT)
     log_counts = count_log_events(captured_logs, "request_weather")
+    called_request = mock_route.calls.last.request
 
-    # assert mock_cache_set.call_count == 2
-    assert isinstance(data, dict)
-    assert data["name"] == "Los Angeles"
-    assert data["coord"]["lat"] == lat
-    assert data["coord"]["lon"] == lon
+    assert called_request.url.params["lat"] == str(TEST_INPUT["lat"])
+    assert called_request.url.params["lon"] == str(TEST_INPUT["lon"])
+    assert data == TEST_RESPONSE
     assert log_counts.get("RETRIES") == 2
     assert log_counts.get("SUCCESS")
     assert not log_counts["ERROR"]
@@ -137,16 +120,18 @@ async def test_request_weather_response_success_with_retries(
 async def test_request_weather_raises_api_timeout_exception_exhausted_retries(
     captured_logs, side_effects: List[Exception]
 ):
-    respx.get(url__regex=r"https://api\.openweathermap\.org/data/2\.5/weather.*").mock(
-        side_effect=side_effects
-    )
+    mock_route = respx.get(
+        url__regex=r"https://api\.openweathermap\.org/data/2\.5/weather.*"
+    ).mock(side_effect=side_effects)
 
-    lat, lon = 34.05, -118.24
     with pytest.raises(APITimeoutException):
-        await request_weather(lat, lon)
+        await request_weather(**TEST_INPUT)
 
     log_counts = count_log_events(captured_logs, "request_weather")
+    called_request = mock_route.calls.last.request
 
+    assert called_request.url.params["lat"] == str(TEST_INPUT["lat"])
+    assert called_request.url.params["lon"] == str(TEST_INPUT["lon"])
     assert log_counts.get("RETRIES") == 2
     assert not log_counts.get("SUCCESS")
     assert log_counts["ERROR"] == 1
@@ -155,10 +140,12 @@ async def test_request_weather_raises_api_timeout_exception_exhausted_retries(
 @pytest.mark.asyncio
 @respx.mock
 async def test_request_weather_raises_api_connection_exception_exhausted_retries(
-    mock_cache_set, captured_logs
+    captured_logs,
 ):
 
-    respx.get(url__regex=r"https://api\.openweathermap\.org/data/2\.5/weather.*").mock(
+    mock_route = respx.get(
+        url__regex=r"https://api\.openweathermap\.org/data/2\.5/weather.*"
+    ).mock(
         side_effect=[
             httpx.ConnectError("network error"),
             httpx.ConnectError("network error"),
@@ -166,13 +153,13 @@ async def test_request_weather_raises_api_connection_exception_exhausted_retries
         ]
     )
 
-    lat, lon = 34.05, -118.24
     with pytest.raises(APIConnectionException):
-        await request_weather(lat, lon)
-
+        await request_weather(**TEST_INPUT)
     log_counts = count_log_events(captured_logs, "request_weather")
+    called_request = mock_route.calls.last.request
 
-    # assert mock_cache_set.call_count == 0
+    assert called_request.url.params["lat"] == str(TEST_INPUT["lat"])
+    assert called_request.url.params["lon"] == str(TEST_INPUT["lon"])
     assert log_counts.get("RETRIES") == 2
     assert not log_counts.get("SUCCESS")
     assert log_counts.get("ERROR")
@@ -184,19 +171,22 @@ async def test_request_weather_raises_bad_status_code_exception(
     captured_logs,
 ):
     mock_response = httpx.Response(500, request=httpx.Request("GET", BASE_URL))
-    respx.get(url__regex=r"https://api\.openweathermap\.org/data/2\.5/weather.*").mock(
+    mock_route = respx.get(
+        url__regex=r"https://api\.openweathermap\.org/data/2\.5/weather.*"
+    ).mock(
         side_effect=httpx.HTTPStatusError(
             "Bad status code", request=None, response=mock_response
         )
     )
 
-    lat, lon = 34.05, -118.24
-
     with pytest.raises(APIBadStatusCode) as exc_info:
-        await request_weather(lat, lon)
+        await request_weather(**TEST_INPUT)
 
     log_counts = count_log_events(captured_logs, "request_weather")
+    called_request = mock_route.calls.last.request
 
+    assert called_request.url.params["lat"] == str(TEST_INPUT["lat"])
+    assert called_request.url.params["lon"] == str(TEST_INPUT["lon"])
     assert "Bad status code" in str(exc_info.value)
     assert not log_counts.get("RETRIES")
     assert not log_counts.get("SUCCESS")
@@ -212,16 +202,18 @@ async def test_request_weather_raises_bad_status_code_exception(
 async def test_request_weather_raises_api_bad_response_exception(
     captured_logs, invalid_response: Any
 ):
-    respx.get(url__regex=r"https://api\.openweathermap\.org/data/2\.5/weather.*").mock(
-        return_value=httpx.Response(200, content=invalid_response)
-    )
+    mock_route = respx.get(
+        url__regex=r"https://api\.openweathermap\.org/data/2\.5/weather.*"
+    ).mock(return_value=httpx.Response(200, content=invalid_response))
 
-    lat, lon = 34.05, -118.24
     with pytest.raises(APIJSONDecodeException) as exc_info:
-        await request_weather(lat, lon)
+        await request_weather(**TEST_INPUT)
 
     log_counts = count_log_events(captured_logs, "request_weather")
+    called_request = mock_route.calls.last.request
 
+    assert called_request.url.params["lat"] == str(TEST_INPUT["lat"])
+    assert called_request.url.params["lon"] == str(TEST_INPUT["lon"])
     assert not log_counts.get("RETRIES")
     assert not log_counts.get("SUCCESS")
     assert log_counts.get("ERROR") == 1
@@ -230,22 +222,34 @@ async def test_request_weather_raises_api_bad_response_exception(
 
 @pytest.mark.asyncio
 @respx.mock
-async def test_request_weather_raises_api_validation_exception(captured_logs):
+@pytest.mark.skip_mock_OpenWeatherSchema_load
+async def test_request_weather_raises_api_validation_exception(
+    monkeypatch, captured_logs
+):
     mock_response = {
         "id": 282828,
         "main": "Invalid Main Data",
         "name": "Los Angeles",
     }
-    respx.get(url__regex=r"https://api\.openweathermap\.org/data/2\.5/weather.*").mock(
-        return_value=httpx.Response(200, json=mock_response)
+
+    mock_route = respx.get(
+        url__regex=r"https://api\.openweathermap\.org/data/2\.5/weather.*"
+    ).mock(return_value=httpx.Response(200, json=mock_response))
+
+    monkeypatch.setattr(
+        weather_fetchers.OpenWeatherSchema,
+        "load",
+        lambda self, x: (_ for _ in ()).throw(ValidationError("Invalid data format")),
     )
 
-    lat, lon = 34.05, -118.24
     with pytest.raises(APIValidationException) as exc_info:
-        await request_weather(lat, lon)
+        await request_weather(**TEST_INPUT)
 
     log_counts = count_log_events(captured_logs, "request_weather")
+    called_request = mock_route.calls.last.request
 
+    assert called_request.url.params["lat"] == str(TEST_INPUT["lat"])
+    assert called_request.url.params["lon"] == str(TEST_INPUT["lon"])
     assert not log_counts.get("RETRIES")
     assert not log_counts.get("SUCCESS")
     assert log_counts.get("ERROR") == 1
