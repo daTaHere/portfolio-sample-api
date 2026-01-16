@@ -95,13 +95,14 @@ async def get_current_weather(coords: List[float] | None) -> List[Dict[str, Any]
             "===   WEATHER DATA RETRIEVED SUCCESSFULLY         ===          ",
             extra={"service_method": "get_current_weather"},
         )
+        valid_results = WeatherSchema(many=True).dump(results)
         handle_log(
             "Weather data retrieved successfully.",
             log_level="info",
             event_key="SUCCESS",
             service_method="get_current_weather",
         )
-        return WeatherSchema(many=True).dump(results)
+        return valid_results
     except (ValidationError, AttributeError) as e:
         handle_service_errorV2(
             e,
@@ -115,6 +116,5 @@ async def get_current_weather(coords: List[float] | None) -> List[Dict[str, Any]
             e,
             "Internal Error: unexpected type/value/key while processing weather results.",
             exc_type=ServiceInternalException,
-            service_name="WeatherService",
             service_method="get_current_weather",
         )
