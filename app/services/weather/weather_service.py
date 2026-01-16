@@ -3,7 +3,7 @@ This module is the main weather service layer responsible
 for orchestrating weather data retrieval, caching, and processing.
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from marshmallow import ValidationError
 
 from app.exceptions.exception_handlers import handle_service_errorV2
@@ -18,10 +18,10 @@ from app.services.weather.weather_builders import (
 )
 from app.schemas.weather_schemas import WeatherSchema
 
-_logger = debug_logger("weather_service")
 
-
-async def get_current_weather(coords: List[float] | None) -> List[Dict[str, Any]]:
+async def get_current_weather(
+    coords: Tuple[float, float] | None,
+) -> List[Dict[str, Any]]:
     """
     GET /weather?lat=..&lon=..
     Returns weather for requested location + default cities.
@@ -51,10 +51,6 @@ async def get_current_weather(coords: List[float] | None) -> List[Dict[str, Any]
         results, missing_coords = process_from_cache(fetch_loc)
 
         if not missing_coords:
-            _logger.debug(
-                "===  $$$$$  CACHE HIT ON ALL $$$$$$    ===",
-                extra={"service_method": "get_current_weather"},
-            )
             handle_log(
                 "All coordinates found in cache.",
                 log_level="info",
@@ -63,10 +59,6 @@ async def get_current_weather(coords: List[float] | None) -> List[Dict[str, Any]
             )
             return results
         elif len(missing_coords) == len(fetch_loc):
-            _logger.debug(
-                "===  ?????  ???? MISSED ON ALL on cache. ??????    ===",
-                extra={"service_method": "get_current_weather"},
-            )
             handle_log(
                 "Cache missed all coordinates, fetching all from API.",
                 log_level="info",
@@ -78,23 +70,13 @@ async def get_current_weather(coords: List[float] | None) -> List[Dict[str, Any]
 
             results = current_data
         else:
-            _logger.debug(
-                "*****   PARTIAL CACHE MISS, FETCHING MISSING FROM API  ++++++++",
-                extra={"service_method": "get_current_weather"},
-            )
             handle_log(
                 "Partial cache hit, fetching missing coordinates from API.",
                 log_level="info",
                 event_key="PARTIAL_CACHE_MISSED",
                 service_method="get_current_weather",
             )
-
             results = await fetch_cache_missed(missing_coords, results)
-
-        _logger.debug(
-            "===   WEATHER DATA RETRIEVED SUCCESSFULLY         ===          ",
-            extra={"service_method": "get_current_weather"},
-        )
         valid_results = WeatherSchema(many=True).dump(results)
         handle_log(
             "Weather data retrieved successfully.",

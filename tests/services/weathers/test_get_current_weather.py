@@ -1,4 +1,12 @@
-# tests/services/weather/test_weather_service.py
+"""
+Comprehensive unit tests for the get_current_weather service.
+Covers:
+- Successful request with and without query parameters.
+- Handling cache hits, partial cache misses, and full cache misses.
+- Correct exception raising for internal and validation errors.
+- Asynchronous HTTP request mocking with respx.
+"""
+
 import pytest
 from unittest.mock import patch
 from marshmallow import ValidationError

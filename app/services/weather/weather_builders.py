@@ -42,7 +42,9 @@ def batcher(
         yield lst[i : i + n]
 
 
-def create_fetch_list(user_coords: List[float] | None) -> List[Tuple[float, float]]:
+def create_fetch_list(
+    user_coords: Tuple[float, float] | None,
+) -> List[Tuple[float, float]]:
     """
     Build and order coordinates list for fetching weather.
     returns: List of 10 tuples (lat, lon)
