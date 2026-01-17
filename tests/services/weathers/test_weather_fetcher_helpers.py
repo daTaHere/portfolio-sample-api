@@ -107,6 +107,22 @@ async def test_fetch_all_success(
     assert log_counts.get("FETCH_ALL") == 1
 
 
+@pytest.mark.asyncio
+async def test_fetch_all_successV2(
+    captured_logs,
+    mock_request_weather,
+):
+    results = await fetch_all(DEFAULT_WEATHER_CITIES)
+    actual_args = [c.args for c in mock_request_weather.call_args_list]
+
+    log_counts = count_log_events(captured_logs, "fetch_all")
+
+    assert mock_request_weather.call_count == len(DEFAULT_WEATHER_CITIES)
+    assert actual_args == DEFAULT_WEATHER_CITIES
+    assert len(results) == len(DEFAULT_WEATHER_CITIES)
+    assert log_counts.get("FETCH_ALL") == 1
+
+
 @pytest.mark.parametrize(
     "mock_index, mock_lat, mock_lon",
     [

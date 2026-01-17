@@ -148,11 +148,17 @@ def process_from_cache(
         missing_count=len(missing_coords),
         cached_count=len(loc_list) - len(missing_coords),
     )
-    if len(missing_coords):
+    if len(missing_coords) > 0:
         cache_set(
             "weather_coords_list",
             WeatherCoordsCacheSchema().dump({"coords": loc_list}),
             ttl=200,
+        )
+        handle_log(
+            "Updated cached weather coordinates list.",
+            log_level="info",
+            event_key="WEATHER_COORDS_CACHED",
+            service_method="process_from_cache",
         )
 
     return cached_results, missing_coords
