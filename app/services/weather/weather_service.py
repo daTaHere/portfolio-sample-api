@@ -8,7 +8,7 @@ from marshmallow import ValidationError
 
 from app.exceptions.exception_handlers import handle_service_errorV2
 from app.exceptions.service import ServiceInternalException, ServiceValidationException
-from app.utils.logger_helper import handle_log, debug_logger
+from app.utils.logger_helper import handle_log
 from app.services.weather.weather_validators import canonicalize_coords
 from app.services.weather.weather_fetchers import fetch_cache_missed, fetch_all
 from app.services.weather.weather_builders import (

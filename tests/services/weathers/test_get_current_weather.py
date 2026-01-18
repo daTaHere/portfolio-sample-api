@@ -17,15 +17,13 @@ from app.exceptions.service import ServiceInternalException, ServiceValidationEx
 from tests.utils import count_log_events
 
 # Sample coordinates for testing
-TEST_COORDS = [40.7128, -74.0060]
+TEST_COORDS = (40.7128, -74.0060)
 # Mock return values
 MOCK_CANONICALIZED_RESULTS = [(40.712, -74.006), (34.05, -118.24)]
 MOCK_MISSING_COORDS_LIST = [(1, (34.05, -118.24))]
 MOCK_CACHE_RESULTS = [{"name": "NYC", "temp": 20}]
 MOCK_MISSING_RESULTS = [{"name": "LA", "temp": 25}]
 MOCK_FETCHED_RESULTS = [{"name": "NYC", "temp": 20}, {"name": "LA", "temp": 25}]
-
-MOCK_FETCHED_RESULTSV2 = []
 
 
 @pytest.fixture
@@ -56,12 +54,6 @@ def mock_fetch_cache_missed():
 def mock_create_weather_model():
     with patch("app.services.weather.weather_service.create_weather_model") as mock:
         yield mock
-
-
-# @pytest.fixture
-# def mock_WeatherSchema():
-#     with patch("app.services.weather.weather_service.WeatherSchema") as mock:
-#         yield mock
 
 
 # -------------------------------------------------
