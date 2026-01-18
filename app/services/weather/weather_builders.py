@@ -42,7 +42,9 @@ def batcher(
         yield lst[i : i + n]
 
 
-def create_fetch_list(user_coords: List[float] | None) -> List[Tuple[float, float]]:
+def create_fetch_list(
+    user_coords: Tuple[float, float] | None,
+) -> List[Tuple[float, float]]:
     """
     Build and order coordinates list for fetching weather.
     returns: List of 10 tuples (lat, lon)
@@ -146,11 +148,17 @@ def process_from_cache(
         missing_count=len(missing_coords),
         cached_count=len(loc_list) - len(missing_coords),
     )
-    if len(missing_coords):
+    if len(missing_coords) > 0:
         cache_set(
             "weather_coords_list",
             WeatherCoordsCacheSchema().dump({"coords": loc_list}),
             ttl=200,
+        )
+        handle_log(
+            "Updated cached weather coordinates list.",
+            log_level="info",
+            event_key="WEATHER_COORDS_CACHED",
+            service_method="process_from_cache",
         )
 
     return cached_results, missing_coords

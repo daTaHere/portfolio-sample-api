@@ -9,15 +9,15 @@ from app.utils.logger_helper import handle_log, debug_logger
 _logger = debug_logger("weather_validators")
 
 
-def get_client_location() -> List[float]:
+def get_client_location() -> Tuple[float, float]:
     """Extract client-provided lat/lon from query parameters."""
     lat = request.args.get("lat")
     lon = request.args.get("lon")
-    return list(map(float, [lat, lon]))
+    return tuple(map(float, [lat, lon]))
 
 
 # --- Geo IP lookup service ---
-def geo_ip_lookup() -> List[float] | None:
+def geo_ip_lookup() -> Tuple[float, float] | None:
     """Fallback to IP geolocation to get lat/lon if client does not provide."""
     handle_log(
         "Performing IP geolocation lookup.",
@@ -44,7 +44,7 @@ def geo_ip_lookup() -> List[float] | None:
                 service_method="geo_ip_lookup",
             )
             return None
-        fallback_coords = list(map(float, ip_data["loc"].split(",")))
+        fallback_coords = tuple(map(float, ip_data["loc"].split(",")))
         handle_log(
             "IP geolocation lookup successful.",
             log_level="info",
@@ -63,7 +63,7 @@ def geo_ip_lookup() -> List[float] | None:
         return None
 
 
-def validate_coords_key() -> List[float] | None:
+def validate_coords_key() -> Tuple[float, float] | None:
     """Return pair of coordinates else None."""
 
     if request.args.get("lat") and request.args.get("lon"):
@@ -109,7 +109,7 @@ def truncate(value: float, decimals: int = 3) -> float:
 
 
 # --- Truncate location data to 3 decimals to ensure city level accuracy ---
-def canonicalize_coords(coords: List[float]) -> Tuple[float, float] | None:
+def canonicalize_coords(coords: Tuple[float, float]) -> Tuple[float, float] | None:
     """Validate range and format coordinates to 3 decimal places."""
     handle_log(
         "Canonicalizing coordinates for cache key.",

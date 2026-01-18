@@ -14,15 +14,15 @@ This project demonstrates **third-party API integration**, **async service orche
 
 The architecture emphasizes **clean separation of concerns**, **structured logging**, **validation-first design**, and **testability**, targeting **medium-to-large scale backend systems**.
 
-> ⚠️ **Status:** Actively developed. Core architecture and service layer are stable.
+> ⚠️ **Status:** Actively developed. Core architecture and service layer are hardened and unit-tested. Route-layer hardening is in progress.
 
 ---
 
 ## ✨ Features
 
-- Fully **async service layer** for scalable I/O-bound workloads
+- **Async-compatible** service layer using **httpx** and **asyncio** for I/O-bound workloads
 - **Redis-backed caching** with explicit DTO + schema validation
-- **Marshmallow** input/output validation enforcing API contracts
+- **Marshmallow** input/output validation enforcing service and API contracts
 - **Structured logging** (structlog-style) for observability
 - **SQLAlchemy ORM** with environment-aware database configuration
 - **SQLite** for local development, **PostgreSQL** for staging/production
@@ -30,6 +30,7 @@ The architecture emphasizes **clean separation of concerns**, **structured loggi
 - **Celery + Redis** ready for background task processing
 - Centralized **exception handling** and error modeling
 - **Unit tests** covering service and route layers with async mocking
+- **Services** are allowed to raise domain exceptions; routes translate them to HTTP response
 
 ---
 
@@ -139,6 +140,11 @@ pytest tests/
 - Schema validation asserted in tests
 - Designed for refactor safety
 
+### Testing Philosophy
+- Services are tested as behavior units, not implementation details
+- External systems (HTTP, cache, geo-IP) are always mocked
+- Validation and exception paths are explicitly asserted
+- Logging is treated as part of the contract and verified in tests
 
 ## 🌍 Environment Configuration
 

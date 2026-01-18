@@ -7,6 +7,8 @@ Routes are a fully asynchronous implementation with 3rd party API integration, c
 from flask import Blueprint
 
 from app.exceptions.api import APIConnectionException, APITimeoutException
+from app.exceptions.base import APIExceptionV2, ServiceExceptionV2
+from app.exceptions.exception_handlers import handle_route_error
 
 from app.services.weather import get_current_weather
 from app.services.weather.weather_validators import validate_coords_key
@@ -49,3 +51,35 @@ async def get_weather():
         return handle_route_response(False, str(e), 503)
     except APITimeoutException as e:
         return handle_route_response(False, str(e), 408)
+    except APIExceptionV2 as e:
+        handle_route_error(
+            e,
+            "APIException occurred",
+            route="/weather",
+            service_method="get_weather",
+        )
+        return handle_route_response(False, str(e), 502)
+    except ServiceExceptionV2 as e:
+        handle_route_error(
+            e,
+            "ServiceException occurred",
+            route="/weather",
+            service_method="get_weather",
+        )
+        return handle_route_response(False, str(e), 500)
+    except (ValueError, TypeError) as e:
+        handle_route_error(
+            e,
+            "ValueError or TypeError occurred",
+            route="/weather",
+            service_method="get_weather",
+        )
+        return handle_route_response(False, str(e), 400)
+    except Exception as e:
+        handle_route_error(
+            e,
+            "Unexpected error occurred",
+            route="/weather",
+            service_method="get_weather",
+        )
+        return handle_route_response(False, str(e), 500)

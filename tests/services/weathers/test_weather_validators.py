@@ -51,8 +51,8 @@ def patch_geo_ip_lookup(monkeypatch):
 @pytest.mark.parametrize(
     "test_args,expected",
     [
-        ({"lat": "34.05", "lon": "-118.24"}, [34.05, -118.24]),
-        ({"lat": "0", "lon": "0"}, [0.0, 0.0]),
+        ({"lat": "34.05", "lon": "-118.24"}, (34.05, -118.24)),
+        ({"lat": "0", "lon": "0"}, (0.0, 0.0)),
     ],
 )
 def test_get_client_location(monkeypatch, test_args, expected):
@@ -63,7 +63,7 @@ def test_get_client_location(monkeypatch, test_args, expected):
     result = get_client_location()
 
     assert result == expected
-    assert isinstance(result, list)
+    assert isinstance(result, tuple)
     assert all(isinstance(coord, float) for coord in result)
 
 
@@ -84,8 +84,8 @@ def test_geo_ip_lookup_success(mock_requests_get, captured_logs):
     result = geo_ip_lookup()
     log_counts = count_log_events(captured_logs, "geo_ip_lookup")
 
-    assert result == [34.05, -118.24]
-    assert isinstance(result, list)
+    assert result == (34.05, -118.24)
+    assert isinstance(result, tuple)
     assert all(isinstance(coord, float) for coord in result)
     assert log_counts.get("GEO_IP_LOOKUP") == 1
     assert not log_counts.get("IP_LOOKUP_FAILED")
@@ -122,7 +122,7 @@ def test_validate_coords_key_client_coords(
 
     log_counts = count_log_events(captured_logs, "validate_coords_key")
 
-    assert result == [34.05, -118.24]
+    assert result == (34.05, -118.24)
     assert patch_geo_ip_lookup["val"] is False
     assert log_counts.get("CLIENT_COORDS") == 1
     assert not log_counts.get("IP_GEO_LOOKUP")
