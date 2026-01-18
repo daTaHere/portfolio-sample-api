@@ -19,16 +19,16 @@ from app.utils.logger_helper import handle_log
 
 
 DEFAULT_CITIES = [
-    (34.05, -118.24),  # LA
-    (40.71, -74.00),  # NYC
-    (41.87, -87.62),  # Chicago
-    (29.76, -95.36),  # Houston
-    (25.76, -80.19),  # Miami
-    (51.51, -0.13),  # London
-    (35.68, 139.69),  # Tokyo
-    (39.90, 116.40),  # Beijing
-    (30.03, 31.23),  # Cairo
-    (-33.86, 151.21),  # Sydney
+    (34.050, -118.240),  # LA
+    (40.710, -74.000),  # NYC
+    (41.870, -87.620),  # Chicago
+    (29.760, -95.360),  # Houston
+    (25.760, -80.190),  # Miami
+    (51.510, -0.130),  # London
+    (35.680, 139.690),  # Tokyo
+    (39.900, 116.400),  # Beijing
+    (30.030, 31.230),  # Cairo
+    (-33.860, 151.210),  # Sydney
 ]
 
 DEFAULT_BATCH_SIZE = 5
