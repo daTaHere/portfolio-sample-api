@@ -86,7 +86,7 @@ class TestCreateFetchList:
         assert fetch_list == DEFAULT_TEST_COORDS
         assert log_counts.get("INFO") == 1
         assert log_counts.get("GET_DEFAULT_CITIES")
-        assert not log_counts.get("PREPEND_USER_COORDS") == 1
+        assert not log_counts.get("PREPEND_USER_COORDS")
         assert not log_counts.get("SWAP_LOCATION_ORDER")
         assert not log_counts.get("SUCCESS")
 
