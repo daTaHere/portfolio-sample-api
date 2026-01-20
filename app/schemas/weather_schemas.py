@@ -102,7 +102,7 @@ class WeatherSchema(Schema):
         validate=Length(min=1),
     )
     conditions = fields.Nested(
-        WeatherConditionsSchema, required=False, validate=Length(min=3)
+        WeatherConditionsSchema, required=False, validate=Length(min=1)
     )
 
     @post_dump

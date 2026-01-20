@@ -29,7 +29,7 @@ OPENWEATHER_MINIMAL_VALID_PAYLOAD = {
 }
 
 # -------------------------------------------
-#     Payloads for WeahterSchema testing
+#     Payloads for WeatherSchema testing
 # -------------------------------------------
 
 WEATHER_VALID_FULL_PAYLOAD = {

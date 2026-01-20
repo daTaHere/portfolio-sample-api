@@ -125,7 +125,7 @@ def test_weather_model_init_handles_missing_optional_keys():
     assert model.name == TEST_EXPECTED_NAME
     assert model.country == TEST_EXPECTED_COUNTRY
     assert model.coord == TEST_EXPECTED_COORD
-    assert model.dt == None
+    assert model.dt is None
     assert model.temperature == TEST_EXPECTED_TEMP
     assert model.weather == TEST_EXPECTED_WEATHER
     assert model.conditions == TEST_EXPECTED_CONDITIONS_MINIMAL

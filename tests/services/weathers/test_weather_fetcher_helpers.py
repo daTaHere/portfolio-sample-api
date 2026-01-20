@@ -162,7 +162,6 @@ async def test_fetch_cache_missed_success(
 
     log_counts = count_log_events(captured_logs, "fetch_cache_missed")
 
-    print("Results:", type(results[0]), flush=True)
     assert mock_fetch_with_index.call_count == len(missed_coords)
     assert (
         results[0].name == "Los Angeles"
