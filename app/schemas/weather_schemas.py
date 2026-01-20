@@ -1,6 +1,7 @@
 """This module defines schemas for validating and (de)serializing feed-related data."""
 
 from marshmallow import Schema, fields, INCLUDE
+from marshmallow.validate import Length
 
 
 # Schemas for OpenWeatherMap API response validation
@@ -41,7 +42,7 @@ class OpenWeatherSchema(Schema):
     weather = fields.List(
         fields.Nested(OpenWeatherDescSchema),
         required=True,
-        validate=lambda x: len(x) > 0,
+        validate=Length(min=1),
     )
 
 

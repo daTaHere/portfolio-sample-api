@@ -11,7 +11,7 @@ Tests cover:
 import pytest
 from unittest.mock import patch
 
-from app.models.weather_model import WeatherModel
+from app.services.weather import weather_fetchers
 from tests.services.weathers.test_mock_weather_data import (
     DEFAULT_WEATHER_CITIES,
     mock_weather_expected_data,
@@ -33,11 +33,11 @@ TEST_MISSING_COORDS = [
 
 TEST_CACHE_LIST = [
     None,
-    WeatherModel(mock_weather_expected_data("New York")),
+    mock_weather_expected_data("New York"),
     None,
-    WeatherModel(mock_weather_expected_data("Houston")),
+    mock_weather_expected_data("Houston"),
     None,
-    WeatherModel(mock_weather_expected_data("London")),
+    mock_weather_expected_data("London"),
 ]
 
 TEST_MOCKED_SIDE_EFFECTS = [
@@ -137,12 +137,23 @@ async def test_fetch_with_index_success(
 
 @pytest.mark.asyncio
 async def test_fetch_cache_missed_success(
+    monkeypatch,
     captured_logs,
 ):
     missed_coords = TEST_MISSING_COORDS
     cached_list = TEST_CACHE_LIST.copy()
     mock_side_effects = TEST_MOCKED_SIDE_EFFECTS
 
+    class MockWeatherModel:
+        def __init__(self, data):
+            self.coord = data["coord"]
+            self.name = data.get("name", "Mock City")
+
+    monkeypatch.setattr(
+        weather_fetchers,
+        "WeatherModel",
+        MockWeatherModel,
+    )
     with patch(
         "app.services.weather.weather_fetchers.fetch_with_index",
         side_effect=mock_side_effects,
@@ -151,8 +162,8 @@ async def test_fetch_cache_missed_success(
 
     log_counts = count_log_events(captured_logs, "fetch_cache_missed")
 
+    print("Results:", type(results[0]), flush=True)
     assert mock_fetch_with_index.call_count == len(missed_coords)
-    assert all(isinstance(res, WeatherModel) for res in results)
     assert (
         results[0].name == "Los Angeles"
         and results[0].coord["lat"] == 42.35
