@@ -10,7 +10,7 @@ from tests.utils import count_log_events
 TEST_CACHE_HIT_COORDS = [(1.0, -1.0), (2.0, -2.0)]
 TEST_CACHE_MISS_COORDS = [(5.0, -5.0), (8.0, -8.0)]
 
-MOCK_CACHE_HIT_REPSONSE = [
+MOCK_CACHE_HIT_RESPONSE = [
     SimpleNamespace(name="CityA"),
     SimpleNamespace(name="CityB"),
 ]
@@ -65,7 +65,7 @@ async def test_fetch_weather_updates_success(
     # return deserialized coords because cache_get returns already json.loads processed dict
     cached_coords = {"coords": TEST_CACHE_HIT_COORDS}
 
-    fresh_data = MOCK_CACHE_HIT_REPSONSE
+    fresh_data = MOCK_CACHE_HIT_RESPONSE
 
     mock_cache_get.return_value = cached_coords
     mock_cache_schema_load.side_effect = lambda x: x
