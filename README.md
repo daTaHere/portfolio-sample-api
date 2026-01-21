@@ -29,7 +29,7 @@ The architecture emphasizes **clean separation of concerns**, **structured loggi
 - **Docker & Docker Compose** for dev/prod parity
 - **Celery + Redis** ready for background task processing
 - Centralized **exception handling** and error modeling
-- **Unit tests** covering service and route layers with async mocking
+- Comprehensive **Unit Tests** for service and route layers, including async external calls
 - **Services** are allowed to raise domain exceptions; routes translate them to HTTP response
 
 ---

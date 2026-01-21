@@ -20,27 +20,31 @@ class WeatherModel:
     )
 
     def __init__(self, weather_data: Dict[str, Any]):
-        self._id: int = weather_data.get("id")
-        self.name: str = weather_data.get("name")
-        self.country: str = weather_data.get("sys", {}).get("country")
-        self.coord: Dict[str, float] = weather_data.get("coord")
+        """Initialize WeatherModel instance from raw weather data dictionary."""
+        main = weather_data["main"]
+        sys = weather_data["sys"]
+
+        self._id: int = weather_data["id"]
+        self.name: str = weather_data["name"]
+        self.country: str = sys["country"]
+        self.coord: Dict[str, float] = weather_data["coord"]
         self.dt: int = weather_data.get("dt")
         self.temperature: Dict[str, float] = {
-            "current": weather_data.get("main", {}).get("temp"),
-            "temp_high": weather_data.get("main", {}).get("temp_max"),
-            "temp_low": weather_data.get("main", {}).get("temp_min"),
+            "current": main["temp"],
+            "temp_high": main["temp_max"],
+            "temp_low": main["temp_min"],
         }
-        self.weather: List[Dict[str, Any]] = weather_data.get("weather")
+        self.weather: List[Dict[str, Any]] = weather_data["weather"]
         self.conditions: Dict[str, Any] = {
-            "wind": weather_data.get("wind", None),
-            "visibility": weather_data.get("visibility", None),
-            "clouds": weather_data.get("clouds", None),
+            "wind": weather_data.get("wind"),
+            "visibility": weather_data.get("visibility"),
+            "clouds": weather_data.get("clouds"),
             "extra_details": {
-                "pressure": weather_data.get("main", {}).get("pressure", None),
-                "humidity": weather_data.get("main", {}).get("humidity", None),
-                "feels_like": weather_data.get("main", {}).get("feels_like", None),
-                "sunrise": weather_data.get("sys", {}).get("sunrise", None),
-                "sunset": weather_data.get("sys", {}).get("sunset", None),
+                "pressure": main.get("pressure"),
+                "humidity": main.get("humidity"),
+                "feels_like": main.get("feels_like"),
+                "sunrise": sys.get("sunrise"),
+                "sunset": sys.get("sunset"),
             },
         }
 
