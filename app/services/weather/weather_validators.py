@@ -2,7 +2,7 @@
 
 import requests
 from flask import request
-from typing import List, Tuple
+from typing import Tuple
 
 from app.utils.logger_helper import handle_log, debug_logger
 
