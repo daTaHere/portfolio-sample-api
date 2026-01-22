@@ -1,16 +1,22 @@
-"""Functions related to fetching feed data from external APIs."""
+"""This module includes functions to fetch feed data from JSONPlaceholder API asynchronously."""
 
-import httpx
 import asyncio
-
 from typing import Any, Dict, List
 
-from app.exceptions.base import APIException, ServiceException
-from app.exceptions.exception_handlers import handle_service_error
+import httpx
+from marshmallow import ValidationError
 
+from app.exceptions.api import (
+    APIBadStatusCode,
+    APIConnectionException,
+    APIJSONDecodeException,
+    APIValidationException,
+    APITimeoutException,
+)
+from app.exceptions.service import ServiceInternalException
+from app.exceptions.exception_handlers import handle_api_error, handle_service_errorV2
 from app.utils.logger_helper import handle_log
 from app.schemas import PostSchema, CommentSchema
-from marshmallow import ValidationError
 
 
 POST_ENDPOINT = "https://jsonplaceholder.typicode.com/posts"
@@ -31,102 +37,116 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
     data = None
 
     # Retry loop for handling transient errors
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
+        for attempt in range(1, MAX_RETRIES + 1):
             handle_log(
                 "Attempting request",
                 method="GET",
                 event_key="ATTEMPTS",
                 log_level="info",
+                service_name="JSONPlaceholder",
                 service_method="send_request",
                 request_attempt=attempt,
                 endpoint=url,
             )
-            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
-                res = await client.get(url)
-                res.raise_for_status()
+            try:
+                resp = await client.get(url)
+                resp.raise_for_status()
+                data = resp.json()
+                clean_data = validator.load(data)
 
-                try:
-                    handle_log(
-                        "Validating response data",
-                        event_key="VALIDATION",
-                        log_level="debug",
-                        service_method="send_request",
-                        endpoint=url,
-                    )
+                handle_log(
+                    f"Successful response received items: {len(data)}",
+                    method="GET",
+                    event_key="SUCCESS",
+                    log_level="info",
+                    service_method="send_request",
+                    endpoint=url,
+                )
 
-                    # Validate and deserialize response data
-                    data = validator.load(res.json())
-                    return data
-                except httpx.DecodingError as e:
-                    handle_service_error(
+                return clean_data
+            except httpx.ConnectError as e:
+                wait_time = RETRY_BACKOFF_BASE * (2 ** (attempt - 1))
+                if attempt == MAX_RETRIES:
+                    handle_api_error(
                         e,
-                        "External API Error: Invalid JSON response.",
-                        "Request returned invalid JSON.",
-                        exc_type=APIException,
+                        "Unreachable: failed to establish connection to JSONPlaceholder API.",
+                        exc_type=APIConnectionException,
                         url=url,
+                        method="GET",
+                        service_name="JSONPlaceholder",
                         service_method="send_request",
                     )
-        except (httpx.RequestError, httpx.ConnectTimeout) as e:
-            wait_time = RETRY_BACKOFF_BASE * (2 ** (attempt - 1))
-
-            if attempt == MAX_RETRIES:
-                handle_service_error(
+                handle_log(
+                    f"CONNECT ERROR: Request attempt failed, retrying in {wait_time:.2f}s",
+                    method="GET",
+                    event_key="RETRIES",
+                    log_level="warning",
+                    service_name="JSONPlaceholder",
+                    service_method="send_request",
+                    endpoint=url,
+                    request_attempt=attempt,
+                    error=str(e),
+                )
+                await asyncio.sleep(wait_time)
+            except (httpx.ConnectTimeout, httpx.TimeoutException) as e:
+                wait_time = RETRY_BACKOFF_BASE * (2 ** (attempt - 1))
+                if attempt == MAX_RETRIES:
+                    handle_api_error(
+                        e,
+                        "Unreachable: fetch failed due to timeout.",
+                        exc_type=APITimeoutException,
+                        url=url,
+                        method="GET",
+                        service_name="JSONPlaceholder",
+                        service_method="send_request",
+                    )
+                handle_log(
+                    f"TIMEOUT ERROR: Request attempt failed, retrying in {wait_time:.2f}s",
+                    method="GET",
+                    event_key="RETRIES",
+                    log_level="warning",
+                    service_method="send_request",
+                    endpoint=url,
+                    request_attempt=attempt,
+                    error=str(e),
+                )
+            except httpx.HTTPStatusError as e:
+                handle_api_error(
                     e,
-                    "External API Error: Unreachable",
-                    "Request failed. Exhausted all retries.",
-                    exc_type=APIException,
+                    "Bad status code received from JSONPlaceholder API.",
+                    exc_type=APIBadStatusCode,
                     url=url,
+                    method="GET",
+                    service_name="JSONPlaceholder",
                     service_method="send_request",
                 )
-            handle_log(
-                f"Request attempt failed, retrying in {wait_time:.2f}s",
-                method="GET",
-                event_key="RETRIES",
-                log_level="warning",
-                service_method="send_request",
-                endpoint=url,
-                request_attempt=attempt,
-                error=str(e),
-            )
-            await asyncio.sleep(wait_time)
-        except httpx.HTTPStatusError as e:
-            handle_service_error(
-                e,
-                f"External API Error: Bad status code: {e.response.status_code}",
-                "Request returned bad status code.",
-                exc_type=APIException,
-                url=url,
-                service_method="send_request",
-            )
-        except ValidationError as e:
-            handle_service_error(
-                e,
-                "External API Error: Data validation failed.",
-                "Response data validation error.",
-                exc_type=APIException,
-                url=url,
-                service_method="send_request",
-            )
-        except (TypeError, ValueError) as e:
-            handle_service_error(
-                e,
-                "Internal Error: Type or value error.",
-                "Response data type or value error.",
-                event_key="ERROR",
-                log_level="debug",
-                exc_type=ServiceException,
-                service_method="send_request",
-                endpoint=url,
-                error=str(e),
-            )
-
-    handle_log(
-        "Successful response received",
-        method="GET",
-        event_key="SUCCESS",
-        log_level="info",
-        service_method="send_request",
-        endpoint=url,
-        items=len(data),
-    )
+            except httpx.DecodingError as e:
+                handle_api_error(
+                    e,
+                    "Bad response data received from JSONPlaceholder API.",
+                    exc_type=APIJSONDecodeException,
+                    url=url,
+                    method="GET",
+                    service_name="JSONPlaceholder",
+                    service_method="send_request",
+                )
+            except (TypeError, ValueError) as e:
+                handle_service_errorV2(
+                    e,
+                    "Internal Error: Type/Value error.",
+                    exc_type=ServiceInternalException,
+                    service_method="send_request",
+                    schema=validator.__class__.__name__,
+                )
+            except ValidationError as e:
+                handle_api_error(
+                    e,
+                    "Validation Error: Invalid data format received from JSONPlaceholder API.",
+                    exc_type=APIValidationException,
+                    url=url,
+                    method="GET",
+                    service_name="JSONPlaceholder",
+                    service_method="send_request",
+                    schema=validator.__class__.__name__,
+                )
