@@ -14,22 +14,23 @@ This project demonstrates **third-party API integration**, **async service orche
 
 The architecture emphasizes **clean separation of concerns**, **structured logging**, **validation-first design**, and **testability**, targeting **medium-to-large scale backend systems**.
 
-> ⚠️ **Status:** Actively developed. Core architecture and service layer are stable.
+> ⚠️ **Status:**  Weather API complete and fully tested. Core service layer hardened. Ongoing: refactor and harden feeds service layer, route layer, and unit tests.
 
 ---
 
 ## ✨ Features
 
-- Fully **async service layer** for scalable I/O-bound workloads
+- **Async-compatible** service layer using **httpx** and **asyncio** for I/O-bound workloads
 - **Redis-backed caching** with explicit DTO + schema validation
-- **Marshmallow** input/output validation enforcing API contracts
+- **Marshmallow** input/output validation enforcing service and API contracts
 - **Structured logging** (structlog-style) for observability
 - **SQLAlchemy ORM** with environment-aware database configuration
 - **SQLite** for local development, **PostgreSQL** for staging/production
 - **Docker & Docker Compose** for dev/prod parity
 - **Celery + Redis** ready for background task processing
 - Centralized **exception handling** and error modeling
-- **Unit tests** covering service and route layers with async mocking
+- Comprehensive **Unit Tests** for service and route layers, including async external calls
+- **Services** are allowed to raise domain exceptions; routes translate them to HTTP response
 
 ---
 
@@ -58,22 +59,23 @@ The project follows a **layered, service-oriented architecture**:
 
 ```
 portfolio-sample-api/
-├── app/
-│ ├── __init__.py               # App factory
-│ ├── clients/                  # External service & cache clients
-│ │ └── redis_client.py
-│ ├── exceptions/               # Domain & HTTP exception modeling
-│ │ ├── base.py
-│ │ └── exception_handlers.py
-│ ├── schemas/                  # Marshmallow schemas (I/O validation)
-│ ├── models/                   # ORM & domain models
-│ ├── dto/                      # Internal data transfer objects
-│ ├── routes/                   # HTTP layer (Blueprints)
-│ ├── services/                 # Business logic & orchestration
-│ ├── utils/                    # Shared helpers             
-│ |  └── logger_helper.py
-│ ├── logging.py                # Logging configuration
-│
+├── app/                        # Application package
+│   ├── __init__.py             # App factory
+│   ├── clients/                # External service & cache clients
+│   │   └── redis_client.py
+│   ├── dto/                    # DTOs for caching & feature separation
+│   ├── exceptions/             # Domain & HTTP custom exceptions
+│   ├── models/                 # ORM & domain models
+│   ├── routes/                 # HTTP layer / endpoint controller (Blueprints)
+│   ├── schemas/                # Marshmallow schemas for I/O validation
+│   ├── services/               # Business logic & orchestration
+│   │   ├── feeds
+│   │   ├── users
+│   │   └── weather
+│   ├── tasks/                  # Background schedulers / Celery tasks
+│   ├── utils/                  # Shared helpers
+│   │   └── logger_helper.py
+│   └── logging.py              # Logging configuration
 ├── tests/                      # Unit & integration tests
 ├── instance/                   # Local SQLite DB (auto-generated)
 ├── config.py                   # Environment-based config
@@ -139,6 +141,11 @@ pytest tests/
 - Schema validation asserted in tests
 - Designed for refactor safety
 
+### Testing Philosophy
+- Services are tested as behavior units, not implementation details
+- External systems (HTTP, cache, geo-IP) are always mocked
+- Validation and exception paths are explicitly asserted
+- Logging is treated as part of the contract and verified in tests
 
 ## 🌍 Environment Configuration
 
@@ -155,7 +162,6 @@ export FLASK_ENV=production
 ---
 
 ## 🗺️ Roadmap / Future Enhancements
-- OpenWeather & JSONPlaceholder integrations
 - Cache invalidation strategies & metrics
 - Auth & RBAC
 - Rate limiting

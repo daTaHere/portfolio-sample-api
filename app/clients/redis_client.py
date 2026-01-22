@@ -23,7 +23,6 @@ def init_redis(app):
             decode_responses=True,
             socket_connect_timeout=app.config.get("REDIS_SOCKET_CONNECT_TIMEOUT", 0.2),
             socket_timeout=app.config.get("REDIS_SOCKET_TIMEOUT", 0.8),
-            retry_on_timeout=False,  # fail fast
             health_check_interval=0,  # optional, prevents background pings
         )
         handle_log(

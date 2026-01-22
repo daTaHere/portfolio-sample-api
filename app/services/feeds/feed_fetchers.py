@@ -57,7 +57,7 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
 
                     # Validate and deserialize response data
                     data = validator.load(res.json())
-                    break  # exit retry loop on success
+                    return data
                 except httpx.DecodingError as e:
                     handle_service_error(
                         e,
@@ -129,5 +129,3 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
         endpoint=url,
         items=len(data),
     )
-
-    return data

@@ -6,6 +6,9 @@ services:
       context: .
       dockerfile: Dockerfile
     image: portfolio-api-sample:1.0
+    # Inject environment variables from .env file
+    env_file:
+      - .env
     ports:
       - "5000:5000"
     volumes:
@@ -15,14 +18,12 @@ services:
       FLASK_DEBUG: "1"
     networks:
       - portfolio-api-net
-    depends_on:
-      - redis
 
   redis:
     image: redis:8
-    # Uncomment the following lines to container for testing purposes
-    # ports:
-    #   - "6379:6379"
+    # Mapping port for development debugging purposes only
+    ports:
+      - "6379:6379" # Remove port mapping in production for better security
     volumes:
       - redis-data:/data
     networks:

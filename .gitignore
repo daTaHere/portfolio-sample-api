@@ -24,7 +24,7 @@ coverage.xml
 .pytest_cache/
 
 ### Flask ###
-instance/**
+instance/*
 .webassets-cache
 
 ### Celery ###
