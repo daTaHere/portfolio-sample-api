@@ -45,7 +45,6 @@ def create_app(config_name=None):
     CORS(app)
 
     # --- Production ProxyFix config (trust first proxy) ---
-    # from werkzeug.middleware.proxy_fix import ProxyFix
 
     # 🔒 Trust exactly 1 proxy hop
     app.wsgi_app = ProxyFix(

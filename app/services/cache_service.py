@@ -174,3 +174,4 @@ def cache_delete(key: str) -> int:
             key=key,
             exception=repr(e),
         )
+        return None
