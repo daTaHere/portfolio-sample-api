@@ -7,7 +7,6 @@ from app.exceptions.api import (
     APIConnectionException,
     APIJSONDecodeException,
     APIBadStatusCode,
-    APIBadStatusCode,
 )
 from app.exceptions.service import ServiceInternalException, ServiceValidationException
 
