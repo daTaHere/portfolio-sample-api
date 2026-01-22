@@ -2,11 +2,9 @@
 
 import requests
 from flask import request
-from typing import List, Tuple
+from typing import Tuple
 
-from app.utils.logger_helper import handle_log, debug_logger
-
-_logger = debug_logger("weather_validators")
+from app.utils.logger_helper import handle_log
 
 
 def get_client_location() -> Tuple[float, float]:
@@ -67,10 +65,6 @@ def validate_coords_key() -> Tuple[float, float] | None:
     """Return pair of coordinates else None."""
 
     if request.args.get("lat") and request.args.get("lon"):
-        _logger.debug(
-            "===  $$$$$  CLIENT PROVIDED COORDS  $$$$$$    ===",
-            extra={"service_method": "get_weather "},
-        )
         handle_log(
             "Client provided current location coordinates.",
             log_level="info",
@@ -85,10 +79,6 @@ def validate_coords_key() -> Tuple[float, float] | None:
             log_level="info",
             event_key="IP_GEO_LOOKUP",
             service_method="validate_coords_key",
-        )
-        _logger.debug(
-            "===  $$$$$  GEO IP LOOKUP FOR COORDS  $$$$$$    ===",
-            extra={"service_method": "get_weather "},
         )
         coords = geo_ip_lookup()
 
