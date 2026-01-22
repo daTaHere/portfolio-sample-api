@@ -161,7 +161,6 @@ export FLASK_ENV=production
 ---
 
 ## 🗺️ Roadmap / Future Enhancements
-- OpenWeather & JSONPlaceholder integrations
 - Cache invalidation strategies & metrics
 - Auth & RBAC
 - Rate limiting

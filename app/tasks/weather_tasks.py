@@ -1,3 +1,5 @@
+"""This module contains scheduled tasks related to weather data updates."""
+
 import asyncio
 
 from app.services.cache_service import cache_get
@@ -9,6 +11,8 @@ from app.utils.logger_helper import handle_log
 
 
 async def fetch_weather_updates_async():
+    """Refresh weather data for cached coordinates if available else defaults fallback cities coordinates."""
+
     handle_log(
         "Scheduled task started.",
         log_level="info",

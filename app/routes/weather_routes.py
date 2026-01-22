@@ -1,10 +1,12 @@
-from flask import Blueprint
+"""This module contains all weather feature related route controllers."""
 
+from flask import Blueprint
 
 from app.exceptions.api import (
     APITimeoutException,
     APIConnectionException,
     APIJSONDecodeException,
+    APIBadStatusCode,
     APIBadStatusCode,
 )
 from app.exceptions.service import ServiceInternalException, ServiceValidationException
@@ -14,19 +16,19 @@ from app.services.weather.weather_validators import validate_coords_key
 from app.utils.route_utils import handle_route_response
 from app.utils.logger_helper import handle_log
 
-"""
-Weather route handler for current weather data requested from OPENWEATHER API.
-Returns weather for client location + 9 default cities.
-- Attempts to use provided lat/lon query params.
-- Falls back to IP geolocation if params are missing.
-- Returns total of 10 locations' weather data.
-"""
-
 weather_bp = Blueprint("weather", __name__)
 
 
 @weather_bp.route("/weather", methods=["GET"])
 async def get_weather():
+    """
+    Weather route handler for current weather data requested from OPENWEATHER API.
+    Returns weather for client location + 9 default cities.
+    - Attempts to use provided lat/lon query params.
+    - Falls back to IP geolocation if params are missing.
+    - Returns total of 10 locations' weather data.
+    """
+
     handle_log(
         "Inbound weather request received.",
         method="GET",
@@ -36,9 +38,8 @@ async def get_weather():
         route="/weather",
     )
 
-    coords = validate_coords_key()
-
     try:
+        coords = validate_coords_key()
         weather_data = await get_current_weather(coords)
         if not weather_data:
             handle_log(
@@ -50,6 +51,15 @@ async def get_weather():
                 route="/weather",
             )
             return handle_route_response(True, "Not Found", 404)
+
+        handle_log(
+            "Weather data successfully retrieved.",
+            method="GET",
+            log_level="info",
+            event_key="SUCCESS",
+            service_method="get_weather",
+            route="/weather",
+        )
 
         return handle_route_response(True, weather_data, 200)
 
