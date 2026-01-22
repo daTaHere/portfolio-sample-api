@@ -12,14 +12,12 @@ from unittest.mock import patch
 
 from marshmallow import ValidationError
 
-from app.models.weather_model import WeatherModel
 from app.services.weather import weather_builders
 from app.services.weather.weather_builders import (
     create_fetch_list,
     process_from_cache,
     create_weather_model,
 )
-
 from app.exceptions.service import ServiceInternalException, ServiceValidationException
 
 from tests.utils import count_log_events
