@@ -25,7 +25,7 @@ def geo_ip_lookup() -> Tuple[float, float] | None:
     )
     try:
         # Use this line in production environment (from flask import request)
-        # client_ip = request.addr
+        # client_ip = request.remote_addr
         client_ip = requests.get(
             "https://api.ipify.org", timeout=2
         )  # For local testing

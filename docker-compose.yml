@@ -22,9 +22,8 @@ services:
   redis:
     image: redis:8
     # Mapping port for development debugging purposes only
-    # Remove port mapping in production for better security
     ports:
-      - "6379:6379"
+      - "6379:6379" # Remove port mapping in production for better security
     volumes:
       - redis-data:/data
     networks:

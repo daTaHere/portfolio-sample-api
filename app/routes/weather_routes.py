@@ -39,6 +39,7 @@ async def get_weather():
     )
 
     try:
+        # move validate_coords_key to service layer later and update tests
         coords = validate_coords_key()
         weather_data = await get_current_weather(coords)
         if not weather_data:
