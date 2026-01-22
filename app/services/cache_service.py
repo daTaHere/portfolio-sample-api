@@ -2,7 +2,7 @@
 
 import json
 import os
-from typing import Dict
+from typing import Any
 from app.clients.redis_client import redis_client
 
 from app.utils.logger_helper import handle_log
@@ -13,9 +13,13 @@ executor = ThreadPoolExecutor(max_workers=5)
 CACHE_TIMEOUT_SEC = float(os.getenv("REDIS_SOCKET_TIMEOUT", 0.5))  # seconds
 
 
-def cache_set(key: str, value: dict, ttl: int = 10) -> None:
+def cache_set(key: str, value: Any, ttl: int = 10) -> None:
     """
-    Set a cache value in Redis with a specified TTL (time-to-live) in seconds.
+    Takes a key and value , serializes to string, and stores in Redis with TTL.
+    arguments:
+        key: str - The cache key.
+        value: Any - The value to cache (will be serialized to JSON).
+        ttl: int - Time-to-live in seconds (default is 10 seconds).
     """
     handle_log(
         f"Setting cache for key: {key}",
@@ -63,7 +67,7 @@ def cache_set(key: str, value: dict, ttl: int = 10) -> None:
         )
 
 
-def cache_get(key: str) -> Dict | None:
+def cache_get(key: str) -> Any | None:
     """
     Retrieve a cache value from Redis by key.
     """
@@ -104,7 +108,7 @@ def cache_get(key: str) -> Dict | None:
             key=key,
             items=len(data) if data else 0,
         )
-
+        return data
     except Exception as e:
         handle_log(
             f"Unable to fetch cache for key: {key}",
@@ -115,8 +119,6 @@ def cache_get(key: str) -> Dict | None:
             key=key,
             exception=repr(e),
         )
-
-    return data
 
 
 def cache_delete(key: str) -> int:
@@ -161,7 +163,7 @@ def cache_delete(key: str) -> int:
             service_method="cache_delete",
             key=key,
         )
-
+        return is_deleted
     except Exception as e:
         handle_log(
             f"Unable to delete cache for key: {key}",
@@ -172,5 +174,3 @@ def cache_delete(key: str) -> int:
             key=key,
             exception=repr(e),
         )
-
-    return is_deleted
