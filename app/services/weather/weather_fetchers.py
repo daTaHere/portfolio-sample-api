@@ -193,7 +193,7 @@ async def fetch_cache_missed(
     response = []
     for batch in batcher(missed_coords):
         tasks = [fetch_with_index(idx, lat, lon) for idx, (lat, lon) in batch]
-        response = await asyncio.gather(*tasks)
+        response.extend(await asyncio.gather(*tasks))
     # process results
     for idx, weather_data in response:
         weather_model = WeatherModel(weather_data)
