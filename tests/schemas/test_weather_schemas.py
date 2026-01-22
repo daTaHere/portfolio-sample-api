@@ -4,7 +4,7 @@ from marshmallow import ValidationError
 from app.schemas.weather_schemas import OpenWeatherSchema, WeatherSchema
 
 # -------------------------------------------
-#   Payloads for OpenWeahterSchema testing
+#   Payloads for OpenWeatherSchema testing
 # -------------------------------------------
 
 OPENWEATHER_VALID_FULL_PAYLOAD = {

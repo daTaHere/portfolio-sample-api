@@ -1,4 +1,4 @@
-"""This module defines schemas for validating and (de)serializing weather-related data."""
+"""This module defines schemas for validating and (de)serializing feed-related data."""
 
 from marshmallow import Schema, fields, post_dump, INCLUDE, EXCLUDE
 from marshmallow.validate import Length
