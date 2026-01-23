@@ -1,6 +1,7 @@
 """This module includes functions to fetch feed data from JSONPlaceholder API asynchronously."""
 
 import asyncio
+from json import JSONDecodeError
 from typing import Any, Dict, List
 
 import httpx
@@ -121,7 +122,7 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
                     service_name="JSONPlaceholder",
                     service_method="send_request",
                 )
-            except httpx.DecodingError as e:
+            except (httpx.DecodingError, JSONDecodeError) as e:
                 handle_api_error(
                     e,
                     "Bad response data received from JSONPlaceholder API.",
@@ -137,7 +138,6 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
                     "Internal Error: Type/Value error.",
                     exc_type=ServiceInternalException,
                     service_method="send_request",
-                    schema=validator.__class__.__name__,
                 )
             except ValidationError as e:
                 handle_api_error(

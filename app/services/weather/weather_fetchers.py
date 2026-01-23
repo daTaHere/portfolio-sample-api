@@ -1,6 +1,7 @@
 """This module includes functions to fetch weather data from OpenWeatherMap API asynchronously."""
 
 import asyncio
+from json import JSONDecodeError
 from typing import Any, Dict, List, Tuple
 
 import httpx
@@ -128,7 +129,7 @@ async def request_weather(lat: float, lon: float) -> Dict[str, Any]:
                     service_name="OpenWeatherMap_API",
                     service_method="request_weather",
                 )
-            except httpx.DecodingError as e:
+            except (httpx.DecodingError, JSONDecodeError) as e:
                 handle_api_error(
                     e,
                     "Bad response data received from OpenWeatherMap API.",
