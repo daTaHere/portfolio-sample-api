@@ -35,6 +35,7 @@ def create_model_list(input_data: List[Dict[str, Any]], model: Type[T]) -> List[
             f"Error creating {model.__name__} instances",
             exc_type=ServiceValidationException,
             service_method="create_model_list",
+            schema=model.__name__,
         )
     except AttributeError as e:
         handle_service_errorV2(
