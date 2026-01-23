@@ -3,7 +3,8 @@ from typing import Any, Dict, List
 from app.services.feeds.feed_fetchers import send_request
 
 from app.exceptions.base import ServiceException
-from app.exceptions.exception_handlers import raise_error
+from app.exceptions.service import ServiceInternalException
+from app.exceptions.exception_handlers import handle_service_errorV2, raise_error
 
 from app.utils.logger_helper import handle_log
 
@@ -90,7 +91,9 @@ def check_cache(
             service_method="check_cache",
             model="PostWithComments",
         )
-        raise ValueError("Requested range out of bounds.")
+        raise ServiceInternalException(
+            model="PostWithComments",
+        )
     offset = start - _start
 
     return _data[offset : offset + limit]
