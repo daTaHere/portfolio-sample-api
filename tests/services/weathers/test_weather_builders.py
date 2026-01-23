@@ -12,7 +12,6 @@ from unittest.mock import patch
 
 from marshmallow import ValidationError
 
-from app.models.weather_model import WeatherModel
 from app.services.weather import weather_builders
 from app.services.weather.weather_builders import (
     create_fetch_list,

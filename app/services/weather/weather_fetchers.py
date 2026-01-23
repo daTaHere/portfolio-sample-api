@@ -1,25 +1,29 @@
 """This module includes functions to fetch weather data from OpenWeatherMap API asynchronously."""
 
 import asyncio
+from json import JSONDecodeError
 from typing import Any, Dict, List, Tuple
 
 import httpx
 from marshmallow import ValidationError
+
+from config import Config
 
 from app.exceptions.api import (
     APITimeoutException,
     APIConnectionException,
     APIBadStatusCode,
     APIValidationException,
+    APIJSONDecodeException,
 )
+from app.exceptions.service import ServiceInternalException
+from app.exceptions.exception_handlers import handle_api_error, handle_service_errorV2
 from app.models.weather_model import WeatherModel
 from app.services.cache_service import cache_set
-from app.exceptions.exception_handlers import handle_api_error
-from app.utils.logger_helper import handle_log
 from app.services.weather.weather_builders import batcher
 from app.schemas.weather_schemas import OpenWeatherSchema, WeatherSchema
-from app.exceptions.api import APIJSONDecodeException
-from config import Config
+from app.utils.logger_helper import handle_log
+
 
 MAX_RETRIES = 3
 HTTP_TIMEOUT_SECONDS = 5.0
@@ -125,7 +129,7 @@ async def request_weather(lat: float, lon: float) -> Dict[str, Any]:
                     service_name="OpenWeatherMap_API",
                     service_method="request_weather",
                 )
-            except (TypeError, ValueError) as e:
+            except (httpx.DecodingError, JSONDecodeError) as e:
                 handle_api_error(
                     e,
                     "Bad response data received from OpenWeatherMap API.",
@@ -134,6 +138,14 @@ async def request_weather(lat: float, lon: float) -> Dict[str, Any]:
                     method="GET",
                     service_name="OpenWeatherMap_API",
                     service_method="request_weather",
+                )
+            except (TypeError, ValueError) as e:
+                handle_service_errorV2(
+                    e,
+                    "Internal Error: Type/Value error.",
+                    exc_type=ServiceInternalException,
+                    service_method="request_weather",
+                    model=validator.__class__.__name__,
                 )
             except ValidationError as e:
                 handle_api_error(
@@ -144,7 +156,7 @@ async def request_weather(lat: float, lon: float) -> Dict[str, Any]:
                     method="GET",
                     service_name="OpenWeatherMap_API",
                     service_method="request_weather",
-                    schema="OpenWeatherSchema",
+                    schema=validator.__class__.__name__,
                 )
 
 
