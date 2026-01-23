@@ -116,7 +116,7 @@ async def test_send_request_success_after_retries(
     mock_async = respx.get(url)
     mock_async.mock(side_effect=side_effects)
 
-    data = await send_request(url)
+    await send_request(url)
 
     log_counts = count_log_events(captured_logs, "send_request")
 

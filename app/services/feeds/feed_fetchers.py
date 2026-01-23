@@ -66,6 +66,7 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
                 )
 
                 return clean_data
+
             except httpx.ConnectError as e:
                 wait_time = RETRY_BACKOFF_BASE * (2 ** (attempt - 1))
                 if attempt == MAX_RETRIES:
@@ -90,6 +91,7 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
                     error=str(e),
                 )
                 await asyncio.sleep(wait_time)
+
             except (httpx.ConnectTimeout, httpx.TimeoutException) as e:
                 wait_time = RETRY_BACKOFF_BASE * (2 ** (attempt - 1))
                 if attempt == MAX_RETRIES:
@@ -112,6 +114,8 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
                     request_attempt=attempt,
                     error=str(e),
                 )
+                await asyncio.sleep(wait_time)
+
             except httpx.HTTPStatusError as e:
                 handle_api_error(
                     e,
