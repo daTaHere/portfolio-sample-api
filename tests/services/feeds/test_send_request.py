@@ -16,7 +16,6 @@ from unittest.mock import patch
 from typing import Any
 from marshmallow import ValidationError
 
-from app.services.feeds import feed_fetchers
 from app.services.feeds.feed_fetchers import send_request
 from app.exceptions.api import (
     APIBadStatusCode,
