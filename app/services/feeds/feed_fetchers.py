@@ -35,7 +35,6 @@ async def send_request(endpoint: str) -> List[Dict[str, Any]]:
     """
     url = endpoint
     validator = POST_SCHEMA if POST_ENDPOINT in endpoint else COMMENT_SCHEMA
-    data = None
 
     # Retry loop for handling transient errors
     async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
