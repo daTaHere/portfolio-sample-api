@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from app.services.feeds.feed_fetchers import send_request
 
@@ -10,6 +10,23 @@ from app.utils.logger_helper import handle_log
 
 
 JSONPLACEHOLDER_BASE_URL = "https://jsonplaceholder.typicode.com"
+
+
+def normalize_pagination(
+    start: int,
+    limit: int,
+) -> Tuple[int, int]:
+    """Validates and normalizes pagination parameters."""
+    if start < 0 or limit <= 0 or limit > 100:
+        handle_log(
+            "Invalid search parameters",
+            method="GET",
+            event_key="VALUE_ERROR",
+            log_level="error",
+            service_method="normalize_pagination",
+        )
+        return None
+    return (start, limit)
 
 
 async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]]:
@@ -76,7 +93,7 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
 
 def check_cache(
     cache_data: Dict[str, Any], start: int, limit: int
-) -> List[Dict[str, Any]]:
+) -> List[Dict[str, Any]] | None:
     """
     Returns a subset of cached data if the requested range is valid.
     Raises ValueError if start/limit are outside cached bounds.
@@ -84,16 +101,15 @@ def check_cache(
     _start, _end, _data = cache_data.values()
     if start < _start or (start + limit - 1) > _end:
         handle_log(
-            f"Requested range out of bounds cache data incomplete.",
+            "Requested range out of bounds cache data incomplete.",
             method="GET",
             event_key="CACHE_RANGE_ERROR",
             log_level="warning",
             service_method="check_cache",
             model="PostWithComments",
         )
-        raise ServiceInternalException(
-            model="PostWithComments",
-        )
+        return None
+
     offset = start - _start
 
     return _data[offset : offset + limit]
