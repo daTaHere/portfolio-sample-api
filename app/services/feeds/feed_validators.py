@@ -12,17 +12,14 @@ from app.utils.logger_helper import handle_log
 JSONPLACEHOLDER_BASE_URL = "https://jsonplaceholder.typicode.com"
 
 
-def normalize_pagination(
-    start: int,
-    limit: int,
-) -> Tuple[int, int]:
+def normalize_pagination(params: Tuple[int, int]) -> Tuple[int, int]:
     """Validates and normalizes pagination parameters."""
+    start, limit = params
     if start < 0 or limit <= 0 or limit > 100:
         handle_log(
             "Invalid search parameters",
-            method="GET",
-            event_key="VALUE_ERROR",
             log_level="error",
+            event_key="INVALID__ERROR",
             service_method="normalize_pagination",
         )
         return None
