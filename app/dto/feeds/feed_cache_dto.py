@@ -9,5 +9,4 @@ class FeedCache:
 
     def __init__(self, start: int, feeds: list[PostWithComments]):
         self.start = start
-        self.end = start + len(feeds)
         self.data = feeds

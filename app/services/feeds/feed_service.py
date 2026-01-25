@@ -68,7 +68,8 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
                 service_method="get_10_feeds",
                 model="PostWithComments",
             )
-            return feeds
+            if feeds is not None:
+                return feeds
 
         except (ValidationError, ValueError) as e:
             feed_logger.error(

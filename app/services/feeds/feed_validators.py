@@ -98,8 +98,10 @@ def check_cache(
     Returns a subset of cached data if the requested range is valid.
     Raises ValueError if start/limit are outside cached bounds.
     """
-    _start, _end, _data = cache_data.values()
-    if start < _start or (start + limit - 1) > _end:
+
+    _start, _data = cache_data["start"], cache_data["data"]
+    offset = start - _start
+    if start < _start or offset + limit > len(_data):
         handle_log(
             "Requested range out of bounds cache data incomplete.",
             method="GET",
@@ -109,7 +111,5 @@ def check_cache(
             model="PostWithComments",
         )
         return None
-
-    offset = start - _start
 
     return _data[offset : offset + limit]
