@@ -14,7 +14,7 @@ from app.schemas.feed_schemas import PostWithCommentsSchema
 from app.dto.feeds.feed_cache_dto import FeedCache
 from app.dto.feeds.feed_cache_schema import FeedCacheSchema
 
-from app.services.feeds.feed_builders import create_model_list
+from app.services.feeds.feed_builders import create_model_list, build_endpoint_url
 from app.services.feeds.feed_validators import get_data, check_cache
 from app.services.cache_service import cache_get, cache_set
 
@@ -98,9 +98,11 @@ async def get_10_feeds(start: int = 0, limit: int = 10) -> List[PostWithComments
             model="PostWithComments",
         )
 
+    api_endpoints = build_endpoint_url(start, limit)
     # Fallthrough: Fetch data and build feeds
-    posts_coro = get_data(POST_ENDPOINT, start, limit)
-    comments_coro = get_data(COMMENT_ENDPOINT, start, limit)
+    posts_coro, comments_coro = [
+        get_data(endpoint, limit) for endpoint in api_endpoints
+    ]
     post_data, comment_data = await asyncio.gather(posts_coro, comments_coro)
 
     posts = create_model_list(post_data, Post)

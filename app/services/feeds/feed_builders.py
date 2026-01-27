@@ -11,6 +11,8 @@ from app.utils.logger_helper import handle_log
 
 T = TypeVar("T", bound=Post | Comment)
 
+JSONPLACEHOLDER_BASE_URL = "https://jsonplaceholder.typicode.com"
+
 
 def create_model_list(input_data: List[Dict[str, Any]], model: Type[T]) -> List[T]:
     """
@@ -56,3 +58,24 @@ def create_model_list(input_data: List[Dict[str, Any]], model: Type[T]) -> List[
     )
 
     return items
+
+
+def build_endpoint_url(start: int, limit: int) -> List[str]:
+    """
+    Construct the endpoint URL for prefetching data from the JSONPlaceholder API.
+    """
+    endpoints = ["posts", "comments"]
+    prefetch_limit = limit * 2
+    url = [
+        f"{JSONPLACEHOLDER_BASE_URL}/{endpoint}?_start={start}&_limit={prefetch_limit}"
+        for endpoint in endpoints
+    ]
+    handle_log(
+        "Constructed endpoint URL",
+        log_level="info",
+        event_key="SUCCESS",
+        service_method="build_endpoint_url",
+        endpoint=url,
+    )
+
+    return url

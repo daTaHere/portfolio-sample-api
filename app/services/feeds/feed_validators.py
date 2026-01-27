@@ -26,40 +26,17 @@ def normalize_pagination(params: Tuple[int, int]) -> Tuple[int, int]:
     return (start, limit)
 
 
-async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]]:
-    """
-    Construct the endpoint URL for prefetching data from the JSONPlaceholder API,
-    send the request, validate the response, and return the list of items.
-    """
+async def get_data(endpoint: str, limit: int) -> List[Dict[str, Any]]:
+
     prefetch_limit = limit * 2
-    url = (
-        f"{JSONPLACEHOLDER_BASE_URL}/{endpoint}?_start={start}&_limit={prefetch_limit}"
-    )
-
-    handle_log(
-        "Constructing endpoint URL",
-        log_level="info",
-        event_key="ENDPOINT_URL",
-        service_method="get_data",
-        endpoint=url,
-    )
-    handle_log(
-        f"Attempt request for {endpoint.upper()}",
-        method="GET",
-        event_key="REQUEST_ATTEMPT",
-        log_level="info",
-        service_method="get_data",
-        endpoint=url,
-    )
-
-    data = await send_request(url)
+    data = await send_request(endpoint)
 
     if not isinstance(data, list) or (len(data) > 0 and not isinstance(data[0], dict)):
         raise_error(
             f"Internal Server Error: expected List of objects got {type(data).__name__}",
             f"Unexpected response type expected List of objects got {type(data).__name__}",
             exc_type=ServiceException,
-            url=url,
+            url=endpoint,
             method="GET",
             service_method="get_data",
             model=endpoint.upper(),
@@ -70,7 +47,7 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
             f"Internal Server Error Received: {len(data)} items, Expected: up to {prefetch_limit} items.",
             f"Response item count mismatch",
             exc_type=ServiceException,
-            url=url,
+            url=endpoint,
             method="GET",
             service_method="get_data",
             model=endpoint.upper(),
@@ -80,7 +57,7 @@ async def get_data(endpoint: str, start: int, limit: int) -> List[Dict[str, Any]
         event_key="SUCCESS",
         log_level="info",
         service_method="get_data",
-        endpoint=url,
+        endpoint=endpoint,
         items=len(data),
         model=endpoint.upper(),
     )
